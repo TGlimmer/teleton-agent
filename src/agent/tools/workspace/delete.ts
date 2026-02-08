@@ -16,7 +16,6 @@ const PROTECTED_WORKSPACE_FILES = [
   "STRATEGY.md",
   "SECURITY.md",
   "MEMORY.md",
-  "BOOTSTRAP.md",
   "IDENTITY.md",
   "USER.md",
 ];
@@ -26,7 +25,7 @@ export const workspaceDeleteTool: Tool = {
   description: `Delete a file or directory from your workspace.
 
 PROTECTED FILES (cannot delete):
-- SOUL.md, MEMORY.md, BOOTSTRAP.md, IDENTITY.md, USER.md
+- SOUL.md, MEMORY.md, IDENTITY.md, USER.md
 
 You CAN delete:
 - Files in memory/, downloads/, uploads/, temp/

@@ -21,7 +21,7 @@ export const workspaceListTool: Tool = {
   description: `List files and directories in your workspace.
 
 Your workspace is at ~/.teleton/workspace/ and contains:
-- SOUL.md, MEMORY.md, BOOTSTRAP.md (config files)
+- SOUL.md, MEMORY.md, IDENTITY.md (config files)
 - memory/ (daily logs)
 - downloads/ (downloaded media)
 - uploads/ (files to send)

@@ -4,6 +4,7 @@ import { TelegramBridge } from "./bridge.js";
 import { getWalletAddress, getWalletBalance } from "../ton/wallet-service.js";
 import { getProviderMetadata, type SupportedProvider } from "../config/providers.js";
 import { DEALS_CONFIG } from "../deals/config.js";
+import { loadTemplate } from "../workspace/manager.js";
 
 export interface AdminCommand {
   command: string;
@@ -304,6 +305,17 @@ export class AdminHandler {
   }
 
   /**
+   * Get bootstrap template content for /boot passthrough
+   */
+  getBootstrapContent(): string | null {
+    try {
+      return loadTemplate("BOOTSTRAP.md");
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * /help - Show available commands
    */
   private handleHelpCommand(): string {
@@ -338,6 +350,9 @@ Give a task to the agent
 
 **/clear** [chat_id]
 Clear conversation history
+
+**/boot**
+Run agent bootstrap (first-time setup conversation)
 
 **/ping**
 Check if agent is responsive

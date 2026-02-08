@@ -29,7 +29,6 @@ export interface Workspace {
   memoryPath: string;
   identityPath: string;
   userPath: string;
-  bootstrapPath: string;
   strategyPath: string;
   securityPath: string;
   // Workspace directories
@@ -84,7 +83,6 @@ export async function ensureWorkspace(config?: WorkspaceConfig): Promise<Workspa
     memoryPath: WORKSPACE_PATHS.MEMORY,
     identityPath: WORKSPACE_PATHS.IDENTITY,
     userPath: WORKSPACE_PATHS.USER,
-    bootstrapPath: WORKSPACE_PATHS.BOOTSTRAP,
     strategyPath: WORKSPACE_PATHS.STRATEGY,
     securityPath: WORKSPACE_PATHS.SECURITY,
     // Workspace directories
@@ -116,7 +114,6 @@ async function bootstrapTemplates(workspace: Workspace): Promise<void> {
     { name: "MEMORY.md", path: workspace.memoryPath },
     { name: "IDENTITY.md", path: workspace.identityPath },
     { name: "USER.md", path: workspace.userPath },
-    { name: "BOOTSTRAP.md", path: workspace.bootstrapPath },
     { name: "SECURITY.md", path: workspace.securityPath },
     { name: "STRATEGY.md", path: workspace.strategyPath },
   ];

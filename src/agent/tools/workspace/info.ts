@@ -93,7 +93,6 @@ export const workspaceInfoExecutor: ToolExecutor<WorkspaceInfoParams> = async (
       structure: {
         "SOUL.md": "Your personality and behavior guidelines",
         "MEMORY.md": "Persistent memory (long-term facts)",
-        "BOOTSTRAP.md": "Startup instructions",
         "IDENTITY.md": "Your identity information",
         "USER.md": "User configuration",
         "STRATEGY.md": "Business strategy (if exists)",

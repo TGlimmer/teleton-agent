@@ -338,19 +338,35 @@ ${blue}  ┌──────────────────────�
       // Check if this is an admin command
       const adminCmd = this.adminHandler.parseCommand(message.text);
       if (adminCmd && this.adminHandler.isAdmin(message.senderId)) {
-        const response = await this.adminHandler.handleCommand(
-          adminCmd,
-          message.chatId,
-          message.senderId
-        );
+        // /boot passes through to the agent with bootstrap instructions
+        if (adminCmd.command === "boot") {
+          const bootstrapContent = this.adminHandler.getBootstrapContent();
+          if (bootstrapContent) {
+            message.text = bootstrapContent;
+            // Fall through to handleMessage below
+          } else {
+            await this.bridge.sendMessage({
+              chatId: message.chatId,
+              text: "❌ Bootstrap template not found.",
+              replyToId: message.id,
+            });
+            return;
+          }
+        } else {
+          const response = await this.adminHandler.handleCommand(
+            adminCmd,
+            message.chatId,
+            message.senderId
+          );
 
-        await this.bridge.sendMessage({
-          chatId: message.chatId,
-          text: response,
-          replyToId: message.id,
-        });
+          await this.bridge.sendMessage({
+            chatId: message.chatId,
+            text: response,
+            replyToId: message.id,
+          });
 
-        return;
+          return;
+        }
       }
 
       // Skip if paused (admin commands still work above)
