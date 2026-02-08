@@ -165,7 +165,7 @@ ${blue}  ┌──────────────────────�
       { value: "casino", label: "Casino", hint: "Slot machine & dice games with TON bets" },
       {
         value: "deals",
-        label: "Deals & Market",
+        label: "Gifts (Deals & Market Data)",
         hint: "Gift/TON trading + floor price scraping (requires Chromium)",
       },
     ],
