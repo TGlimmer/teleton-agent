@@ -40,6 +40,15 @@ export const dealStatusExecutor: ToolExecutor<DealStatusParams> = async (
       };
     }
 
+    // User-scoping: only deal owner or admins can view deal details
+    const adminIds = context.config?.telegram.admin_ids ?? [];
+    if (context.senderId !== deal.user_telegram_id && !adminIds.includes(context.senderId)) {
+      return {
+        success: false,
+        error: `⛔ You can only view your own deals.`,
+      };
+    }
+
     // Format timestamps
     const createdAt = new Date(deal.created_at * 1000).toISOString();
     const expiresAt = new Date(deal.expires_at * 1000).toISOString();

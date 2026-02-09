@@ -53,7 +53,7 @@ Teleton is a production-grade autonomous AI agent that operates as a real Telegr
 | **RAG Search** | Hybrid keyword (FTS5) + semantic (vector) search for context-aware responses |
 | **Auto-Compaction** | AI-summarized context management prevents overflow, preserves key information |
 | **Observation Masking** | Compresses old tool results to save ~90% context window |
-| **Casino System** | Provably fair slot machine and dice games with TON payments, jackpot, and leaderboard |
+| **Casino System** | Provably fair slot machine and dice games with TON payments and leaderboard |
 | **Deals System** | Secure gift/TON trading with code-enforced strategy rules and inline bot confirmations |
 | **Vision Analysis** | Image understanding via multimodal LLM |
 | **Voice Synthesis** | Text-to-speech for voice messages |

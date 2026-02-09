@@ -43,6 +43,15 @@ export const dealVerifyPaymentExecutor: ToolExecutor<DealVerifyPaymentParams> = 
       };
     }
 
+    // User-scoping: only deal owner or admins can verify payment
+    const adminIds = context.config?.telegram.admin_ids ?? [];
+    if (context.senderId !== deal.user_telegram_id && !adminIds.includes(context.senderId)) {
+      return {
+        success: false,
+        error: `⛔ You can only verify payment for your own deals.`,
+      };
+    }
+
     // Check deal status
     if (deal.status !== "accepted") {
       return {

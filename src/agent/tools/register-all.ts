@@ -263,16 +263,10 @@ import {
   casinoSpinExecutor,
   casinoDiceTool,
   casinoDiceExecutor,
-  casinoPayoutTool,
-  casinoPayoutExecutor,
   casinoLeaderboardTool,
   casinoLeaderboardExecutor,
   casinoMyStatsTool,
   casinoMyStatsExecutor,
-  casinoJackpotInfoTool,
-  casinoJackpotInfoExecutor,
-  casinoAwardJackpotTool,
-  casinoAwardJackpotExecutor,
 } from "./casino/index.js";
 
 // Deals tools
@@ -461,11 +455,8 @@ export function registerAllTools(registry: ToolRegistry, config: Config): void {
     registry.register(casinoBalanceTool, casinoBalanceExecutor);
     registry.register(casinoSpinTool, casinoSpinExecutor);
     registry.register(casinoDiceTool, casinoDiceExecutor);
-    registry.register(casinoPayoutTool, casinoPayoutExecutor);
     registry.register(casinoLeaderboardTool, casinoLeaderboardExecutor);
     registry.register(casinoMyStatsTool, casinoMyStatsExecutor);
-    registry.register(casinoJackpotInfoTool, casinoJackpotInfoExecutor);
-    registry.register(casinoAwardJackpotTool, casinoAwardJackpotExecutor);
   }
 
   // Deals System (secure gift/TON trading with STRATEGY.md enforcement)

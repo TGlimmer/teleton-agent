@@ -11,8 +11,8 @@ export const casinoSpinTool: Tool = {
   name: "casino_spin",
   description: `Execute a Teleton Casino slot machine spin with full security checks.
 
-Slot payout table (40% house edge):
-- 🎰 64 (777) = JACKPOT (5x bet)
+Slot payout table:
+- 🎰 64 (777) = 5x bet
 - 🎰 60-63 = Big win (2.5x bet)
 - 🎰 55-59 = Medium win (1.8x bet)
 - 🎰 43-54 = Small win (1.2x bet)
@@ -24,8 +24,7 @@ Process:
 3. Verifies TON payment with username as memo
 4. Auto-discovers player wallet from transaction
 5. Sends 🎰 slot machine animation
-6. Processes house edge (5%) to daily jackpot
-7. AUTO-PAYOUT if player wins
+6. AUTO-PAYOUT if player wins
 
 Tell the user: "Send X TON to [casino_address] with memo: your_username"`,
 
@@ -58,7 +57,7 @@ export const casinoSpinExecutor: ToolExecutor<GameParams> = async (
       gameType: "slot",
       toolName: "casino_spin",
       assetLabel: "SPIN",
-      maxMultiplier: CASINO_CONFIG.slot.jackpot.multiplier,
+      maxMultiplier: CASINO_CONFIG.slot.topWin.multiplier,
       getMultiplier: getSlotMultiplier,
       getInterpretation: getSlotInterpretation,
       maxValue: 64,

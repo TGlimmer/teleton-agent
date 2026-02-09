@@ -115,7 +115,7 @@ export async function sendPayout(
  */
 export function getWinMessage(multiplier: number, amount: number): string {
   if (multiplier >= 5) {
-    return `🎰 JACKPOT! You won ${amount.toFixed(2)} TON (${multiplier}x)`;
+    return `🎰 777! You won ${amount.toFixed(2)} TON (${multiplier}x)`;
   } else if (multiplier >= 2.5) {
     return `🎊 Big win! You won ${amount.toFixed(2)} TON (${multiplier}x)`;
   } else if (multiplier >= 1.8) {

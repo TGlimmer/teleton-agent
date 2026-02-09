@@ -192,7 +192,7 @@ Teleton has **121 tools** across these categories:
 | **Journal** | 3 | Log trades/operations with reasoning and P&L |
 | **Memory** | 2 | Read/write persistent memory (RAG-indexed) |
 | **Workspace** | 6 | Sandboxed file operations |
-| **Casino** | 8 | Slot machine, dice, leaderboard, jackpot |
+| **Casino** | 6 | Slot machine, dice, leaderboard |
 
 ---
 
@@ -363,7 +363,7 @@ src/
 ├── ton/            # Wallet operations, TON blockchain
 ├── market/         # Gift price scraper (Playwright) and cache service
 ├── deals/          # Deal proposals, strategy checker, config
-├── casino/         # Payment verification, slot machine, dice, jackpot
+├── casino/         # Payment verification, slot machine, dice
 ├── bot/            # GramJS MTProto bot for styled inline buttons
 ├── session/        # Session management, transcripts, compaction
 ├── config/         # Zod schema, YAML loader, provider registry

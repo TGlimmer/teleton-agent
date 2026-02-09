@@ -6,7 +6,6 @@
 import type Database from "better-sqlite3";
 import { verifyPayment } from "./payment-verifier.js";
 import { checkCooldown, updateCooldown } from "./cooldown-manager.js";
-import { processBetForJackpot, getJackpot, type JackpotInfo } from "./jackpot-manager.js";
 import { sendPayout, getWinMessage } from "./payout-sender.js";
 import { checkRateLimit } from "./rate-limiter.js";
 import { getWalletAddress, getWalletBalance } from "../ton/wallet-service.js";
@@ -43,8 +42,6 @@ export interface GameResult {
     betAmount: string;
     playerUsername: string;
     playerWallet: string;
-    houseEdge: string;
-    currentJackpot: string;
     paymentTxHash: string;
     journalId: number;
     interpretation: string;
@@ -215,18 +212,6 @@ export function handleCooldown(
  */
 export function setCooldown(db: Database.Database, userId: string): void {
   updateCooldown(db, userId);
-}
-
-/**
- * Process house edge and get jackpot info
- */
-export function processHouseEdge(
-  db: Database.Database,
-  betAmount: number
-): { houseEdge: number; jackpot: JackpotInfo } {
-  const houseEdge = processBetForJackpot(db, betAmount);
-  const jackpot = getJackpot(db);
-  return { houseEdge, jackpot };
 }
 
 /**

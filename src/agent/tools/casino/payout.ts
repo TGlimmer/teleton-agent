@@ -28,8 +28,8 @@ export const casinoPayoutTool: Tool = {
 NOTE: casino_spin and casino_dice already include AUTO-PAYOUT.
 Only use this tool if auto-payout failed and manual intervention is needed.
 
-Slot payout table (40% house edge):
-- Value 64 (🎰 777 Jackpot): 5x bet
+Slot payout table:
+- Value 64 (🎰 777): 5x bet
 - Values 60-63 (Big win): 2.5x bet
 - Values 55-59 (Medium win): 1.8x bet
 - Values 43-54 (Small win): 1.2x bet

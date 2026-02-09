@@ -16,25 +16,18 @@ export const CASINO_CONFIG = {
   // Cooldown
   cooldownSeconds: 30, // Seconds between spins per user
 
-  // House edge
-  houseEdgePercent: 5, // % of each bet goes to jackpot
-
-  // Jackpot
-  jackpotThreshold: 100, // Minimum TON to award jackpot
-  jackpotCooldownHours: 24, // Hours between jackpot awards
-
-  // Slot multipliers (40% house edge, 60% payout)
+  // Slot multipliers
   slot: {
-    jackpot: { range: [64, 64] as [number, number], multiplier: 5 }, // 777
+    topWin: { range: [64, 64] as [number, number], multiplier: 5 }, // 777
     bigWin: { range: [60, 63] as [number, number], multiplier: 2.5 },
     mediumWin: { range: [55, 59] as [number, number], multiplier: 1.8 },
     smallWin: { range: [43, 54] as [number, number], multiplier: 1.2 },
     // Values 1-42: no win
   },
 
-  // Dice multipliers (6.7% house edge, 93.3% payout)
+  // Dice multipliers
   dice: {
-    jackpot: { value: 6, multiplier: 2.5 },
+    topWin: { value: 6, multiplier: 2.5 },
     bigWin: { value: 5, multiplier: 1.8 },
     smallWin: { value: 4, multiplier: 1.3 },
     // Values 1-3: no win
@@ -66,11 +59,6 @@ export function initCasinoConfig(yaml?: CasinoConfig): void {
   if (yaml.max_bet_percent !== undefined) CASINO_CONFIG.maxBetPercent = yaml.max_bet_percent;
   if (yaml.min_bankroll !== undefined) CASINO_CONFIG.minBankroll = yaml.min_bankroll;
   if (yaml.cooldown_seconds !== undefined) CASINO_CONFIG.cooldownSeconds = yaml.cooldown_seconds;
-  if (yaml.house_edge_percent !== undefined)
-    CASINO_CONFIG.houseEdgePercent = yaml.house_edge_percent;
-  if (yaml.jackpot_threshold !== undefined) CASINO_CONFIG.jackpotThreshold = yaml.jackpot_threshold;
-  if (yaml.jackpot_cooldown_hours !== undefined)
-    CASINO_CONFIG.jackpotCooldownHours = yaml.jackpot_cooldown_hours;
   if (yaml.payment_window_minutes !== undefined)
     CASINO_CONFIG.paymentWindowMinutes = yaml.payment_window_minutes;
   if (yaml.max_payment_age_minutes !== undefined)
@@ -89,8 +77,7 @@ export function initCasinoConfig(yaml?: CasinoConfig): void {
  */
 export function getSlotMultiplier(value: number): number {
   const { slot } = CASINO_CONFIG;
-  if (value >= slot.jackpot.range[0] && value <= slot.jackpot.range[1])
-    return slot.jackpot.multiplier;
+  if (value >= slot.topWin.range[0] && value <= slot.topWin.range[1]) return slot.topWin.multiplier;
   if (value >= slot.bigWin.range[0] && value <= slot.bigWin.range[1]) return slot.bigWin.multiplier;
   if (value >= slot.mediumWin.range[0] && value <= slot.mediumWin.range[1])
     return slot.mediumWin.multiplier;
@@ -104,7 +91,7 @@ export function getSlotMultiplier(value: number): number {
  */
 export function getDiceMultiplier(value: number): number {
   const { dice } = CASINO_CONFIG;
-  if (value === dice.jackpot.value) return dice.jackpot.multiplier;
+  if (value === dice.topWin.value) return dice.topWin.multiplier;
   if (value === dice.bigWin.value) return dice.bigWin.multiplier;
   if (value === dice.smallWin.value) return dice.smallWin.multiplier;
   return 0;
@@ -115,7 +102,7 @@ export function getDiceMultiplier(value: number): number {
  */
 export function getSlotInterpretation(value: number): string {
   const { slot } = CASINO_CONFIG;
-  if (value >= slot.jackpot.range[0] && value <= slot.jackpot.range[1]) return "🎰 JACKPOT 777!";
+  if (value >= slot.topWin.range[0] && value <= slot.topWin.range[1]) return "🎰 777! Top win!";
   if (value >= slot.bigWin.range[0] && value <= slot.bigWin.range[1]) return "🎊 Big win!";
   if (value >= slot.mediumWin.range[0] && value <= slot.mediumWin.range[1]) return "✨ Nice win!";
   if (value >= slot.smallWin.range[0] && value <= slot.smallWin.range[1]) return "🎯 Small win!";
@@ -127,7 +114,7 @@ export function getSlotInterpretation(value: number): string {
  */
 export function getDiceInterpretation(value: number): string {
   const { dice } = CASINO_CONFIG;
-  if (value === dice.jackpot.value) return "🎲 JACKPOT 6!";
+  if (value === dice.topWin.value) return "🎲 6! Top win!";
   if (value === dice.bigWin.value) return "🎊 Big win (5)!";
   if (value === dice.smallWin.value) return "✨ Nice win (4)!";
   return `Dice: ${value}`;

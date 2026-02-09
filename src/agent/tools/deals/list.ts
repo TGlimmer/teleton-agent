@@ -38,7 +38,14 @@ export const dealListExecutor: ToolExecutor<DealListParams> = async (
   context
 ): Promise<ToolResult> => {
   try {
-    const { status, userId, limit = 20 } = params;
+    const { status, limit = 20 } = params;
+    let { userId } = params;
+
+    // User-scoping: non-admins can only list their own deals
+    const adminIds = context.config?.telegram.admin_ids ?? [];
+    if (!adminIds.includes(context.senderId)) {
+      userId = context.senderId;
+    }
 
     // Build query
     let query = `SELECT * FROM deals WHERE 1=1`;

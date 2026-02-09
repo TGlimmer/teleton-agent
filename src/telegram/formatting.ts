@@ -62,8 +62,8 @@ export function markdownToTelegramHtml(markdown: string): string {
     const index = blockquotes.length;
     const lineCount = match.split("\n").length;
 
-    // Apply inline formatting to list content
-    const content = match
+    // Escape HTML in list content before applying inline formatting
+    const content = escapeHtml(match)
       .replace(/\|\|([^|]+)\|\|/g, "<tg-spoiler>$1</tg-spoiler>")
       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
       .replace(/__([^_]+)__/g, "<b>$1</b>")
@@ -83,11 +83,13 @@ export function markdownToTelegramHtml(markdown: string): string {
     const index = blockquotes.length;
     const lineCount = match.split("\n").length;
 
-    // Remove > prefix from each line
-    let content = match
-      .split("\n")
-      .map((line) => line.replace(/^>\s?/, ""))
-      .join("\n");
+    // Remove > prefix from each line and escape HTML
+    let content = escapeHtml(
+      match
+        .split("\n")
+        .map((line) => line.replace(/^>\s?/, ""))
+        .join("\n")
+    );
 
     // Apply inline formatting to blockquote content
     content = content
@@ -104,9 +106,8 @@ export function markdownToTelegramHtml(markdown: string): string {
     return `\x00BLOCKQUOTE${index}\x00`;
   });
 
-  // Now escape HTML in the rest of the text
-  // But we need to be careful - only escape < and > that aren't part of our conversions
-  // Actually, let's do the conversions first on the markdown, then the result will be HTML
+  // Escape HTML in remaining text (placeholders are safe - they don't contain &, <, >)
+  html = escapeHtml(html);
 
   // Spoilers: ||text|| → <tg-spoiler>text</tg-spoiler>
   html = html.replace(/\|\|([^|]+)\|\|/g, "<tg-spoiler>$1</tg-spoiler>");

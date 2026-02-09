@@ -298,17 +298,6 @@ export function ensureSchema(db: Database.Database): void {
       last_spin_at INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS casino_jackpot (
-      id INTEGER PRIMARY KEY CHECK(id = 1),
-      amount REAL NOT NULL DEFAULT 0,
-      last_awarded_at INTEGER,
-      last_winner_id TEXT,
-      last_winner_amount REAL
-    );
-
-    -- Insert default jackpot row
-    INSERT OR IGNORE INTO casino_jackpot (id, amount) VALUES (1, 0);
-
     -- =====================================================
     -- JOURNAL (Trading & Business Operations)
     -- =====================================================
@@ -402,7 +391,7 @@ export function setSchemaVersion(db: Database.Database, version: string): void {
   ).run(version);
 }
 
-export const CURRENT_SCHEMA_VERSION = "1.7.0";
+export const CURRENT_SCHEMA_VERSION = "1.8.0";
 
 /**
  * Run migrations to upgrade existing database schema
@@ -716,7 +705,7 @@ export function runMigrations(db: Database.Database): void {
     }
   }
 
-  // Migration 1.7.0: Casino tables (casino_users, used_transactions, cooldowns, jackpot)
+  // Migration 1.7.0: Casino tables (casino_users, used_transactions, cooldowns)
   if (!currentVersion || versionLessThan(currentVersion, "1.7.0")) {
     try {
       console.log("🔄 Running migration 1.7.0: Add casino tables");
@@ -748,21 +737,23 @@ export function runMigrations(db: Database.Database): void {
           user_id TEXT PRIMARY KEY,
           last_spin_at INTEGER NOT NULL
         );
-
-        CREATE TABLE IF NOT EXISTS casino_jackpot (
-          id INTEGER PRIMARY KEY CHECK(id = 1),
-          amount REAL NOT NULL DEFAULT 0,
-          last_awarded_at INTEGER,
-          last_winner_id TEXT,
-          last_winner_amount REAL
-        );
-
-        INSERT OR IGNORE INTO casino_jackpot (id, amount) VALUES (1, 0);
       `);
 
       console.log("✅ Migration 1.7.0 complete: Casino tables added");
     } catch (error) {
       console.error("❌ Migration 1.7.0 failed:", error);
+      throw error;
+    }
+  }
+
+  // Migration 1.8.0: Remove unused casino_jackpot table
+  if (!currentVersion || versionLessThan(currentVersion, "1.8.0")) {
+    try {
+      console.log("🔄 Running migration 1.8.0: Remove casino_jackpot table");
+      db.exec(`DROP TABLE IF EXISTS casino_jackpot;`);
+      console.log("✅ Migration 1.8.0 complete: casino_jackpot removed");
+    } catch (error) {
+      console.error("❌ Migration 1.8.0 failed:", error);
       throw error;
     }
   }

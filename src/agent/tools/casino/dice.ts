@@ -12,7 +12,7 @@ export const casinoDiceTool: Tool = {
   description: `Execute a Teleton Casino dice roll with full security checks.
 
 Dice payout table:
-- 🎲 6 = JACKPOT (2.5x bet)
+- 🎲 6 = Best roll (2.5x bet)
 - 🎲 5 = Big win (1.8x bet)
 - 🎲 4 = Small win (1.3x bet)
 - 🎲 1-3 = No win
@@ -56,7 +56,7 @@ export const casinoDiceExecutor: ToolExecutor<GameParams> = async (
       gameType: "dice",
       toolName: "casino_dice",
       assetLabel: "DICE",
-      maxMultiplier: CASINO_CONFIG.dice.jackpot.multiplier,
+      maxMultiplier: CASINO_CONFIG.dice.topWin.multiplier,
       getMultiplier: getDiceMultiplier,
       getInterpretation: getDiceInterpretation,
       maxValue: 6,

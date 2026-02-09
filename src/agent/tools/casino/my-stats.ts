@@ -45,7 +45,6 @@ export const casinoMyStatsExecutor: ToolExecutor<{}> = async (
            total_losses,
            total_wagered,
            total_won,
-           created_at,
            last_bet_at
          FROM casino_users
          WHERE telegram_id = ?`
@@ -59,7 +58,6 @@ export const casinoMyStatsExecutor: ToolExecutor<{}> = async (
           total_losses: number;
           total_wagered: number;
           total_won: number;
-          created_at: number;
           last_bet_at: number | null;
         }
       | undefined;
@@ -83,7 +81,6 @@ export const casinoMyStatsExecutor: ToolExecutor<{}> = async (
         : "0";
 
     // Format dates
-    const firstPlayDate = new Date(playerStats.created_at * 1000).toLocaleDateString();
     const lastPlayDate = playerStats.last_bet_at
       ? new Date(playerStats.last_bet_at * 1000).toLocaleDateString()
       : "Never";
@@ -109,7 +106,6 @@ export const casinoMyStatsExecutor: ToolExecutor<{}> = async (
         net_pnl: netPnL.toFixed(2),
         net_pnl_positive: netPnL >= 0,
         win_rate: winRate,
-        first_play: firstPlayDate,
         last_play: lastPlayDate,
         status_emoji: statusEmoji,
         message: `${statusEmoji} Teleton Casino Stats:

@@ -47,6 +47,15 @@ export const dealCancelExecutor: ToolExecutor<DealCancelParams> = async (
       };
     }
 
+    // User-scoping: only deal owner or admins can cancel
+    const adminIds = context.config?.telegram.admin_ids ?? [];
+    if (context.senderId !== deal.user_telegram_id && !adminIds.includes(context.senderId)) {
+      return {
+        success: false,
+        error: `⛔ You can only cancel your own deals.`,
+      };
+    }
+
     // Check if deal can be cancelled
     const cancellableStatuses = ["proposed", "accepted"];
     if (!cancellableStatuses.includes(deal.status)) {

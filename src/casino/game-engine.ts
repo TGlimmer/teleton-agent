@@ -1,14 +1,13 @@
 /**
  * Shared casino game engine for slot and dice games.
  * Handles: validation, payment verification, cooldown, Telegram dice,
- * house edge, user upsert, journal logging, auto-payout.
+ * user upsert, journal logging, auto-payout.
  */
 
 import { Api } from "telegram";
 import type { ToolContext, ToolResult } from "../agent/tools/types.js";
 import { verifyPayment } from "./payment-verifier.js";
 import { checkAndUpdateCooldown } from "./cooldown-manager.js";
-import { processBetForJackpot, getJackpot } from "./jackpot-manager.js";
 import { sendPayout, getWinMessage } from "./payout-sender.js";
 import { getWalletAddress, getWalletBalance } from "../ton/wallet-service.js";
 import { checkRateLimit } from "./rate-limiter.js";
@@ -184,14 +183,10 @@ export async function executeGame(
       };
     }
 
-    // 7. Process house edge to jackpot
-    const houseEdge = processBetForJackpot(context.db, bet_amount);
-
-    // 8-10. Record bet, journal, and determine outcome (atomic transaction)
+    // 7-9. Record bet, journal, and determine outcome (atomic transaction)
     const multiplier = config.getMultiplier(gameValue);
     const won = multiplier > 0;
     const payoutAmount = won ? bet_amount * multiplier : 0;
-    const jackpot = getJackpot(context.db);
 
     const recordBet = context.db.transaction(() => {
       // Upsert casino user
@@ -294,8 +289,6 @@ export async function executeGame(
         bet_amount: bet_amount.toFixed(2),
         player_username: username,
         player_wallet: playerWallet,
-        house_edge: houseEdge.toFixed(2),
-        current_jackpot: jackpot.amount.toFixed(2),
         payment_tx_hash: paymentVerification.txHash,
         journal_id: journalId,
         message_id: messageId,

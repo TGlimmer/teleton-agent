@@ -81,9 +81,9 @@ export const casinoBalanceExecutor: ToolExecutor<{}> = async (
     // Max bet is limited by two factors:
     // 1. 5% of total bankroll
     // 2. Must be able to cover maximum payout (5x the bet)
-    const jackpotMultiplier = CASINO_CONFIG.slot.jackpot.multiplier;
+    const maxMultiplier = CASINO_CONFIG.slot.topWin.multiplier;
     const maxBetByPercent = balance * (CASINO_CONFIG.maxBetPercent / 100);
-    const maxBetByCoverage = balance / jackpotMultiplier;
+    const maxBetByCoverage = balance / maxMultiplier;
     const maxBet = Math.min(maxBetByPercent, maxBetByCoverage);
 
     return {
@@ -98,7 +98,7 @@ export const casinoBalanceExecutor: ToolExecutor<{}> = async (
         maxBet: maxBet.toFixed(2),
         minBankroll: CASINO_CONFIG.minBankroll,
         maxBetPercent: CASINO_CONFIG.maxBetPercent,
-        jackpotMultiplier,
+        maxMultiplier,
         memoFormat: "{username}",
         message,
       },
