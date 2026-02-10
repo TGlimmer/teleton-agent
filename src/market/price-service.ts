@@ -1,4 +1,5 @@
-import { getDb, getCollections, getModels, getStats } from "./db.js";
+import { getCollections, getModels, getStats } from "./db.js";
+import { initScraperDb } from "./scraper-db.js";
 import { MarketScraperService } from "./scraper-service.js";
 import type Database from "better-sqlite3";
 import type { MarketConfig } from "../config/schema.js";
@@ -62,8 +63,8 @@ export class MarketPriceService {
     }
 
     try {
-      // Initialize database connection
-      this.db = getDb();
+      // Initialize database connection (ensures schema exists for new installs)
+      this.db = initScraperDb();
 
       // Get initial stats
       const stats = getStats(this.db);
