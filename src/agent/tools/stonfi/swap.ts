@@ -24,8 +24,8 @@ interface JettonSwapParams {
 /**
  * Tool definition for jetton_swap
  */
-export const jettonSwapTool: Tool = {
-  name: "jetton_swap",
+export const stonfiSwapTool: Tool = {
+  name: "stonfi_swap",
   description:
     "Swap tokens on STON.fi DEX. Supports TON↔Jetton and Jetton↔Jetton swaps. Use 'ton' as from_asset to buy jettons with TON, or provide jetton master address. Amount is in human-readable units (will be converted based on decimals). Example: swap 10 TON for USDT, or swap USDT for SCALE.",
   parameters: Type.Object({
@@ -52,7 +52,7 @@ export const jettonSwapTool: Tool = {
 /**
  * Executor for jetton_swap tool
  */
-export const jettonSwapExecutor: ToolExecutor<JettonSwapParams> = async (
+export const stonfiSwapExecutor: ToolExecutor<JettonSwapParams> = async (
   params,
   context
 ): Promise<ToolResult> => {
@@ -180,7 +180,7 @@ export const jettonSwapExecutor: ToolExecutor<JettonSwapParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_swap:", error);
+    console.error("Error in stonfi_swap:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

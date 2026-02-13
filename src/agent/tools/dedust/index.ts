@@ -12,7 +12,7 @@ export { dedustPricesTool, dedustPricesExecutor };
 export { dedustTokenInfoTool, dedustTokenInfoExecutor };
 
 export const tools: ToolEntry[] = [
-  { tool: dedustSwapTool, executor: dedustSwapExecutor },
+  { tool: dedustSwapTool, executor: dedustSwapExecutor, scope: "dm-only" },
   { tool: dedustQuoteTool, executor: dedustQuoteExecutor },
   { tool: dedustPoolsTool, executor: dedustPoolsExecutor },
   { tool: dedustPricesTool, executor: dedustPricesExecutor },

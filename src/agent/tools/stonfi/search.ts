@@ -27,8 +27,8 @@ interface SearchResult {
 /**
  * Tool definition for jetton_search
  */
-export const jettonSearchTool: Tool = {
-  name: "jetton_search",
+export const stonfiSearchTool: Tool = {
+  name: "stonfi_search",
   description:
     "Search for Jettons (tokens) by name or symbol. Returns a list of matching tokens with their addresses, useful for finding a token's address before swapping or checking prices. Search is case-insensitive.",
   parameters: Type.Object({
@@ -49,7 +49,7 @@ export const jettonSearchTool: Tool = {
 /**
  * Executor for jetton_search tool
  */
-export const jettonSearchExecutor: ToolExecutor<JettonSearchParams> = async (
+export const stonfiSearchExecutor: ToolExecutor<JettonSearchParams> = async (
   params,
   context
 ): Promise<ToolResult> => {
@@ -176,7 +176,7 @@ export const jettonSearchExecutor: ToolExecutor<JettonSearchParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_search:", error);
+    console.error("Error in stonfi_search:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

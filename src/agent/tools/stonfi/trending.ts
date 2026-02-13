@@ -13,8 +13,8 @@ interface JettonTrendingParams {
 /**
  * Tool definition for jetton_trending
  */
-export const jettonTrendingTool: Tool = {
-  name: "jetton_trending",
+export const stonfiTrendingTool: Tool = {
+  name: "stonfi_trending",
   description:
     "Get trending/popular Jettons on the TON blockchain. Shows tokens ranked by trading volume and liquidity. Useful for discovering popular tokens.",
   parameters: Type.Object({
@@ -31,7 +31,7 @@ export const jettonTrendingTool: Tool = {
 /**
  * Executor for jetton_trending tool
  */
-export const jettonTrendingExecutor: ToolExecutor<JettonTrendingParams> = async (
+export const stonfiTrendingExecutor: ToolExecutor<JettonTrendingParams> = async (
   params,
   context
 ): Promise<ToolResult> => {
@@ -94,7 +94,7 @@ export const jettonTrendingExecutor: ToolExecutor<JettonTrendingParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error in jetton_trending:", error);
+    console.error("Error in stonfi_trending:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

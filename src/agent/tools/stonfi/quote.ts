@@ -19,8 +19,8 @@ interface JettonQuoteParams {
 /**
  * Tool definition for jetton_quote
  */
-export const jettonQuoteTool: Tool = {
-  name: "jetton_quote",
+export const stonfiQuoteTool: Tool = {
+  name: "stonfi_quote",
   description:
     "Get a price quote for a token swap WITHOUT executing it. Shows expected output, minimum output, price impact, and fees. Use this to preview a swap before committing. Use 'ton' as from_asset for TON, or jetton master address.",
   parameters: Type.Object({
@@ -47,7 +47,7 @@ export const jettonQuoteTool: Tool = {
 /**
  * Executor for jetton_quote tool
  */
-export const jettonQuoteExecutor: ToolExecutor<JettonQuoteParams> = async (
+export const stonfiQuoteExecutor: ToolExecutor<JettonQuoteParams> = async (
   params,
   context
 ): Promise<ToolResult> => {
@@ -122,7 +122,7 @@ export const jettonQuoteExecutor: ToolExecutor<JettonQuoteParams> = async (
     message += `Rate: 1 ${fromSymbol} = ${quote.rate} ${toSymbol}\n`;
     message += `Price impact: ${quote.priceImpact}\n`;
     message += `Fee: ${quote.fee} (${quote.feePercent})\n\n`;
-    message += `⚠️ This is a quote only - use jetton_swap to execute.`;
+    message += `This is a quote only - use stonfi_swap to execute.`;
 
     return {
       success: true,
@@ -132,7 +132,7 @@ export const jettonQuoteExecutor: ToolExecutor<JettonQuoteParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_quote:", error);
+    console.error("Error in stonfi_quote:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

@@ -1,11 +1,12 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
-import { TonClient, toNano, fromNano } from "@ton/ton";
+import { TonClient } from "@ton/ton";
 import { Address } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { StonApiClient } from "@ston-fi/api";
 import { Factory, Asset, PoolType, ReadinessStatus } from "@dedust/sdk";
 import { DEDUST_FACTORY_MAINNET, NATIVE_TON_ADDRESS } from "../dedust/constants.js";
+import { getDecimals, toUnits, fromUnits } from "../dedust/asset-cache.js";
 
 /**
  * Parameters for dex_quote tool
@@ -77,10 +78,14 @@ async function getStonfiQuote(
 
     const stonApiClient = new StonApiClient();
 
+    // Resolve correct decimals
+    const fromDecimals = await getDecimals(fromAsset);
+    const toDecimals = await getDecimals(toAsset);
+
     const simulationResult = await stonApiClient.simulateSwap({
       offerAddress: fromAddress,
       askAddress: toAddress,
-      offerUnits: toNano(amount).toString(),
+      offerUnits: toUnits(amount, fromDecimals).toString(),
       slippageTolerance: slippage.toString(),
     });
 
@@ -99,9 +104,9 @@ async function getStonfiQuote(
     const minAskUnits = BigInt(simulationResult.minAskUnits);
     const feeUnits = BigInt(simulationResult.feeUnits || "0");
 
-    const expectedOutput = Number(fromNano(askUnits));
-    const minOutput = Number(fromNano(minAskUnits));
-    const feeAmount = Number(fromNano(feeUnits));
+    const expectedOutput = fromUnits(askUnits, toDecimals);
+    const minOutput = fromUnits(minAskUnits, toDecimals);
+    const feeAmount = fromUnits(feeUnits, toDecimals);
     const rate = expectedOutput / amount;
 
     return {
@@ -180,7 +185,11 @@ async function getDedustQuote(
       };
     }
 
-    const amountIn = toNano(amount);
+    // Resolve correct decimals
+    const fromDecimals = await getDecimals(isTonInput ? "ton" : fromAsset);
+    const toDecimals = await getDecimals(isTonOutput ? "ton" : toAsset);
+
+    const amountIn = toUnits(amount, fromDecimals);
     const { amountOut, tradeFee } = await pool.getEstimatedSwapOut({
       assetIn: fromAssetObj,
       amountIn,
@@ -188,9 +197,9 @@ async function getDedustQuote(
 
     const minAmountOut = amountOut - (amountOut * BigInt(Math.floor(slippage * 10000))) / 10000n;
 
-    const expectedOutput = Number(fromNano(amountOut));
-    const minOutput = Number(fromNano(minAmountOut));
-    const feeAmount = Number(fromNano(tradeFee));
+    const expectedOutput = fromUnits(amountOut, toDecimals);
+    const minOutput = fromUnits(minAmountOut, toDecimals);
+    const feeAmount = fromUnits(tradeFee, toDecimals);
     const rate = expectedOutput / amount;
 
     return {
@@ -317,7 +326,7 @@ export const dexQuoteExecutor: ToolExecutor<DexQuoteParams> = async (
     if (savings > 0) {
       message += ` (+${savings.toFixed(4)} ${toSymbol}, ${savingsPercent.toFixed(2)}% better)`;
     }
-    message += `\n\nUse dex_swap to execute on the best DEX, or jetton_swap/dedust_swap for specific DEX.`;
+    message += `\n\nUse stonfi_swap or dedust_swap to execute on the recommended DEX.`;
 
     return {
       success: true,

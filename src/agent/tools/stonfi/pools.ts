@@ -14,8 +14,8 @@ interface JettonPoolsParams {
 /**
  * Tool definition for jetton_pools
  */
-export const jettonPoolsTool: Tool = {
-  name: "jetton_pools",
+export const stonfiPoolsTool: Tool = {
+  name: "stonfi_pools",
   description:
     "Get liquidity pools for a Jetton or list top pools by volume. Shows pool addresses, liquidity, volume, APY, and trading pairs. Useful for finding where to trade a token or analyzing DeFi opportunities.",
   parameters: Type.Object({
@@ -38,7 +38,7 @@ export const jettonPoolsTool: Tool = {
 /**
  * Executor for jetton_pools tool
  */
-export const jettonPoolsExecutor: ToolExecutor<JettonPoolsParams> = async (
+export const stonfiPoolsExecutor: ToolExecutor<JettonPoolsParams> = async (
   params,
   context
 ): Promise<ToolResult> => {
@@ -146,7 +146,7 @@ export const jettonPoolsExecutor: ToolExecutor<JettonPoolsParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_pools:", error);
+    console.error("Error in stonfi_pools:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

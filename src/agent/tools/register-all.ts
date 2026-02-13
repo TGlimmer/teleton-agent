@@ -11,9 +11,8 @@ import type { ToolEntry } from "./types.js";
 import { tools as telegramTools } from "./telegram/index.js";
 import { tools as tonTools } from "./ton/index.js";
 import { tools as dnsTools } from "./dns/index.js";
-import { tools as jettonTools } from "./jetton/index.js";
+import { tools as stonfiTools } from "./stonfi/index.js";
 import { tools as dedustTools } from "./dedust/index.js";
-import { tools as dexTools } from "./dex/index.js";
 import { tools as journalTools } from "./journal/index.js";
 import { tools as workspaceTools } from "./workspace/index.js";
 
@@ -21,9 +20,8 @@ const ALL_CATEGORIES: ToolEntry[][] = [
   telegramTools,
   tonTools,
   dnsTools,
-  jettonTools,
+  stonfiTools,
   dedustTools,
-  dexTools,
   journalTools,
   workspaceTools,
 ];
