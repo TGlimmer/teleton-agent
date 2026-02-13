@@ -13,18 +13,17 @@
 
 ## Overview
 
-Teleton is a production-grade autonomous AI agent that operates as a real Telegram user account (not a bot), powered by multi-provider LLM support. It provides full access to the Telegram API with deep TON blockchain integration for cryptocurrency trading, NFT marketplace operations, and decentralized finance.
+Teleton is a production-grade autonomous AI agent that operates as a real Telegram user account (not a bot), powered by multi-provider LLM support. It provides full access to the Telegram API with deep TON blockchain integration for cryptocurrency operations, DEX trading, and decentralized finance.
 
 ### Key Highlights
 
 - **Full Telegram access**: Operates as a real user with the full API, not a limited bot
 - **Multi-Provider LLM**: Anthropic, OpenAI, Google Gemini, xAI Grok, Groq, OpenRouter
 - **TON Blockchain**: Built-in wallet, send/receive TON, swap jettons on STON.fi and DeDust, NFT auctions
-- **Gift trading**: Buy and sell Telegram collectible gifts with real-time floor prices and strategy enforcement
 - **Persistent memory**: Remembers context across restarts with automatic context management
-- **121 tools**: Messaging, media, blockchain transactions, DEX swaps, market analysis, deals, and more
-- **Plugin system**: Drop a `.js` file in a folder and restart, no rebuild needed
-- **Secure by design**: Sandboxed workspace, immutable config, strategy rules enforced in code
+- **106 built-in tools**: Messaging, media, blockchain, DEX swaps, DNS, journaling, and more
+- **Plugin SDK**: Extend the agent with custom tools — full access to TON and Telegram APIs via namespaced SDK
+- **Secure by design**: Sandboxed workspace, immutable config, prompt injection defense
 
 ---
 
@@ -34,27 +33,23 @@ Teleton is a production-grade autonomous AI agent that operates as a real Telegr
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| Telegram | 59 | Full API: messaging, media, groups, polls, stickers, gifts, stories, contacts |
-| TON Blockchain | 17 | W5R1 wallet, send/receive TON, transaction history, price tracking |
-| Jettons (Tokens) | 11 | Balances, swaps, prices, holders, trending tokens, liquidity pools |
-| DeFi | 5 | STON.fi and DeDust DEX integration, smart routing for best swap rates |
-| Deals | 5 | Secure gift/TON trading with inline bot, strategy enforcement, verification |
-| TON DNS | 7 | Domain availability, auctions, bidding, resolution |
-| Gift Marketplace | 4 | Floor prices, search, price history for Telegram collectible gifts |
-| Business Journal | 3 | Track trades/gifts/operations with reasoning and P&L analysis |
-| Memory | 2 | Persistent memory management, RAG-powered context retrieval |
-| Workspace | 6 | Sandboxed file operations with security validation |
+| Telegram | 66 | Messaging, media, chats, groups, polls, stickers, gifts, stars, stories, contacts, folders, profile, memory, tasks |
+| TON Blockchain | 8 | W5R1 wallet, send/receive TON, transaction history, price tracking, charts, NFT listing |
+| Jettons (Tokens) | 11 | Swap, send, balances, prices, holders, trending tokens, liquidity pools |
+| DeFi | 5 | STON.fi and DeDust DEX integration with smart routing for best swap rates |
+| TON DNS | 7 | Domain auctions, bidding, linking, resolution, availability checks |
+| Journal | 3 | Trade/operation logging with natural language queries |
+| Workspace | 6 | Sandboxed file operations with path traversal protection |
 
 ### Advanced Capabilities
 
 | Capability | Description |
 |-----------|-------------|
 | **Multi-Provider LLM** | Switch between Anthropic, OpenAI, Google, xAI, Groq, OpenRouter with one config change |
-| **RAG Search** | Hybrid keyword (FTS5) + semantic (vector) search for context-aware responses |
+| **RAG + Hybrid Search** | Local embeddings with FTS5 keyword + sqlite-vec semantic search |
 | **Auto-Compaction** | AI-summarized context management prevents overflow, preserves key information |
 | **Observation Masking** | Compresses old tool results to save ~90% context window |
-| **Casino System** | Provably fair slot machine and dice games with TON payments and leaderboard |
-| **Deals System** | Secure gift/TON trading with code-enforced strategy rules and inline bot confirmations |
+| **Plugin SDK** | Namespaced SDK (`sdk.ton`, `sdk.telegram`) with isolated databases and lifecycle hooks |
 | **Vision Analysis** | Image understanding via multimodal LLM |
 | **Voice Synthesis** | Text-to-speech for voice messages |
 | **Scheduled Tasks** | Time-based task execution with dependency resolution |
@@ -72,7 +67,7 @@ Teleton is a production-grade autonomous AI agent that operates as a real Telegr
 - **Telegram Account** - Dedicated account recommended for security
 - **Telegram API Credentials** - From [my.telegram.org/apps](https://my.telegram.org/apps)
 - **Your Telegram User ID** - Message [@userinfobot](https://t.me/userinfobot)
-- **Bot Token** *(optional, for deals)* - From [@BotFather](https://t.me/BotFather)
+- **Bot Token** *(optional)* - From [@BotFather](https://t.me/BotFather) for inline bot features
 
 > **Security Warning**: The agent will have full control over the Telegram account. Use a dedicated account, not your main one.
 
@@ -100,7 +95,7 @@ docker run -it -v ~/.teleton:/data ghcr.io/tonresistor/teleton-agent:latest setu
 **From source (development):**
 ```bash
 git clone https://github.com/TONresistor/teleton-agent.git
-cd teleton
+cd teleton-agent
 npm install && npm run build
 ```
 
@@ -168,9 +163,9 @@ telegram:
   owner_name: "Your Name"
   owner_username: "your_username"
 
-  # Optional: inline bot for deals system
+  # Optional: inline bot for interactive features
   bot_token: "123456:ABC-DEF..."
-  bot_username: "your_deals_bot"
+  bot_username: "your_bot"
 
   session_reset_policy:
     daily_reset_enabled: true
@@ -223,7 +218,7 @@ The agent's personality and rules are configured via markdown files in `~/.telet
 |-------|------------|
 | LLM | Multi-provider via [pi-ai](https://github.com/mariozechner/pi-ai) (Anthropic, OpenAI, Google, xAI, Groq, OpenRouter) |
 | Telegram Userbot | [GramJS](https://gram.js.org/) (MTProto) |
-| Inline Bot | [Grammy](https://grammy.dev/) (Bot API, for deal confirmations) |
+| Inline Bot | [Grammy](https://grammy.dev/) (Bot API) |
 | Blockchain | [TON SDK](https://github.com/ton-org/ton) (W5R1 wallet) |
 | DeFi | STON.fi SDK, DeDust SDK |
 | Database | [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) with WAL mode |
@@ -234,52 +229,45 @@ The agent's personality and rules are configured via markdown files in `~/.telet
 ### Project Structure
 
 ```
-teleton-agent/
-├── src/
-│   ├── index.ts               # Main app, tool registry
-│   ├── agent/                  # Core agent runtime
-│   │   ├── runtime.ts          # Agentic loop orchestration
-│   │   ├── client.ts           # Multi-provider LLM client
-│   │   └── tools/              # 121 tool implementations
-│   │       ├── telegram/       # Telegram tools (59)
-│   │       ├── ton/            # TON blockchain (17)
-│   │       ├── jetton/         # Token operations (11)
-│   │       ├── deals/          # Deal management (5)
-│   │       ├── dns/            # TON DNS (7)
-│   │       ├── dedust/         # DeDust DEX (3)
-│   │       ├── dex/            # Smart router (2)
-│   │       ├── journal/        # Business journal (3)
-│   │       └── workspace/      # File operations (6)
-│   ├── telegram/               # Telegram integration
-│   │   ├── bridge.ts           # GramJS wrapper
-│   │   ├── handlers.ts         # Message processing
-│   │   ├── admin.ts            # Admin commands
-│   │   └── callbacks/          # Inline button routing
-│   ├── bot/                    # Grammy inline bot (deals)
-│   │   ├── index.ts            # DealBot class
-│   │   └── services/           # Message builder, verification poller
-│   ├── deals/                  # Deal engine
-│   │   ├── strategy-checker.ts # STRATEGY.md enforcement
-│   │   ├── executor.ts         # TON/gift transfers
-│   │   └── gift-detector.ts    # Gift receipt verification
-│   ├── memory/                 # Storage and knowledge
-│   │   ├── schema.ts           # Database schema + migrations
-│   │   ├── search/             # RAG system (FTS5 + vector)
-│   │   └── compaction.ts       # Context auto-compaction
-│   ├── ton/                    # TON blockchain
-│   │   ├── wallet-service.ts   # W5R1 wallet
-│   │   └── transfer.ts         # TON send operations
-│   ├── soul/                   # System prompt assembly
-│   │   └── loader.ts           # SOUL + STRATEGY + SECURITY + MEMORY
-│   ├── workspace/              # Sandboxed file system
-│   │   ├── validator.ts        # Path traversal protection
-│   │   └── paths.ts            # Workspace constants
-│   ├── config/                 # Configuration
-│   │   ├── schema.ts           # Zod validation
-│   │   └── providers.ts        # LLM provider registry
-│   └── cli/                    # CLI commands
-│       └── commands/           # setup, doctor
-└── README.md
+src/
+├── index.ts               # Entry point, tool registry, lifecycle
+├── agent/                 # Core agent runtime
+│   ├── runtime.ts         # Agentic loop orchestration
+│   ├── client.ts          # Multi-provider LLM client
+│   └── tools/             # 106 built-in tools
+│       ├── telegram/      # Telegram operations (66 tools)
+│       ├── ton/           # TON blockchain (8 tools)
+│       ├── jetton/        # Token operations (11 tools)
+│       ├── dns/           # TON DNS (7 tools)
+│       ├── dedust/        # DeDust DEX (3 tools)
+│       ├── dex/           # Smart router (2 tools)
+│       ├── journal/       # Business journal (3 tools)
+│       └── workspace/     # File operations (6 tools)
+├── telegram/              # Telegram integration layer
+│   ├── bridge.ts          # GramJS wrapper (MTProto)
+│   ├── client.ts          # User client with message sending
+│   ├── handlers.ts        # Message routing and processing
+│   ├── admin.ts           # Admin commands (/status, /clear, /modules)
+│   ├── formatting.ts      # Markdown → Telegram HTML
+│   └── callbacks/         # Inline button routing
+├── memory/                # Storage and knowledge
+│   ├── schema.ts          # Database schema + migrations
+│   ├── database.ts        # SQLite + WAL + vec0
+│   ├── search/            # RAG system (FTS5 + vector)
+│   └── compaction.ts      # Context auto-compaction
+├── ton/                   # TON blockchain
+│   ├── wallet-service.ts  # W5R1 wallet + KeyPair cache
+│   └── transfer.ts        # TON send operations
+├── sdk/                   # Plugin SDK
+│   ├── index.ts           # SDK factory
+│   ├── ton.ts             # TON service for plugins
+│   ├── telegram.ts        # Telegram service for plugins
+│   └── types.ts           # Public SDK types
+├── soul/                  # System prompt assembly
+│   └── loader.ts          # SOUL + STRATEGY + SECURITY + MEMORY
+├── config/                # Configuration (Zod schemas, provider registry)
+├── workspace/             # Sandboxed file system
+└── cli/                   # CLI commands (setup, doctor)
 ```
 
 ---
@@ -291,12 +279,11 @@ teleton-agent/
 | Layer | Protection |
 |-------|-----------|
 | **SECURITY.md** | Identity-based security principles injected into every system prompt |
-| **Strategy enforcement** | Trading rules (buy/sell thresholds) enforced in code, not prompts |
 | **Immutable config** | SOUL.md, STRATEGY.md, SECURITY.md cannot be modified by the agent |
+| **RAG sanitization** | Stored prompt injection defense on all retrieved context |
 | **Memory protection** | Memory writes blocked in group chats to prevent poisoning |
 | **Workspace sandbox** | Agent can only access `~/.teleton/workspace/`, path traversal blocked |
-| **Deal verification** | Gift transfers require a verified deal with blockchain-confirmed payment |
-| **Replay protection** | Used transactions table prevents double-spending |
+| **Plugin isolation** | Plugins get sanitized config (no API keys), isolated databases, frozen SDK objects |
 
 ### Reporting Vulnerabilities
 
@@ -309,8 +296,7 @@ Do not open public issues for security vulnerabilities. Contact maintainers (t.m
 3. Start with restrictive policies (`allowlist`)
 4. Set file permissions: `chmod 600 ~/.teleton/wallet.json`
 5. Never commit `config.yaml` to version control
-6. Configure `STRATEGY.md` with conservative trading thresholds
-7. Review `SECURITY.md` and customize for your use case
+6. Review `SECURITY.md` and customize for your use case
 
 ---
 
@@ -320,7 +306,7 @@ Do not open public issues for security vulnerabilities. Contact maintainers (t.m
 
 ```bash
 git clone https://github.com/TONresistor/teleton-agent.git
-cd teleton
+cd teleton-agent
 npm install
 npm run setup
 npm run dev  # Watch mode with auto-restart
@@ -341,45 +327,80 @@ npm run format      # Prettier
 
 ### Plugins
 
-Teleton supports external plugins loaded from `~/.teleton/plugins/`. Drop a `.js` file or a folder with `index.js`, and it's automatically loaded at startup — no rebuild needed.
+Plugins extend the agent with custom tools. Drop a `.js` file or folder in `~/.teleton/plugins/` — loaded at startup, no rebuild needed.
 
 ```
 ~/.teleton/plugins/
-├── weather.js              # Single file plugin
-└── rss-reader/
+├── weather.js              # Single-file plugin
+└── my-plugin/
     └── index.js            # Folder plugin
 ```
 
-Each plugin exports a `tools` array:
+Plugins export a `tools` function (recommended) or array, plus optional lifecycle hooks:
 
 ```js
 // ~/.teleton/plugins/weather.js
-export const tools = [
+
+export const manifest = {
+  name: "weather",
+  version: "1.0.0",
+  sdkVersion: "1.0.0",
+};
+
+// Optional: creates an isolated database at ~/.teleton/plugins/data/weather.db
+export function migrate(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS weather_cache (
+    city TEXT PRIMARY KEY, data TEXT, cached_at INTEGER
+  )`);
+}
+
+// Required: tools as a function receiving the Plugin SDK
+export const tools = (sdk) => [
   {
     name: "weather_get",
     description: "Get current weather for a city",
     parameters: {
       type: "object",
-      properties: {
-        city: { type: "string", description: "City name" }
-      },
-      required: ["city"]
+      properties: { city: { type: "string", description: "City name" } },
+      required: ["city"],
     },
-    execute: async (params, context) => {
+    execute: async (params) => {
+      sdk.log.info(`Fetching weather for ${params.city}`);
       const res = await fetch(`https://wttr.in/${params.city}?format=j1`);
+      if (!res.ok) return { success: false, error: "City not found" };
       const data = await res.json();
       return { success: true, data: { temp: data.current_condition[0].temp_C } };
-    }
-  }
+    },
+  },
 ];
 ```
 
-The `context` object gives access to `bridge` (Telegram), `db` (SQLite), `chatId`, `senderId`, `config`, and `marketService`.
+#### Plugin SDK
 
-At startup you'll see:
+When `tools` is a function, the SDK provides namespaced access to core services:
+
+| Namespace | Methods |
+|-----------|---------|
+| `sdk.ton` | `getAddress()`, `getBalance()`, `getPrice()`, `sendTON(to, amount, comment?)`, `getTransactions()` |
+| `sdk.telegram` | `sendMessage()`, `editMessage()`, `sendDice()`, `sendReaction()`, `getMessages()`, `getMe()` |
+| `sdk.db` | SQLite database (available if `migrate()` is exported) |
+| `sdk.config` | Sanitized app config (no API keys exposed) |
+| `sdk.pluginConfig` | Plugin-specific config from `config.yaml` `plugins:` section |
+| `sdk.log` | Prefixed logger (`info`, `warn`, `error`, `debug`) |
+
+Plugin config in `config.yaml`:
+```yaml
+plugins:
+  weather:
+    api_key: "abc123"
 ```
-🔌 Plugin "weather.js": 1 tool registered
-✅ 122 tools loaded (1 from plugins)
+
+Backward compatible: plugins can export `tools` as a static array without the SDK.
+
+At startup:
+```
+🔌 Plugin "weather": 1 tool registered
+✅ 107 tools loaded (1 from plugins)
 ```
 
 ---

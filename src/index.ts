@@ -36,6 +36,7 @@ export class TonnetApp {
   private dependencyResolver: any; // TaskDependencyResolver, imported lazily
   private modules: PluginModule[] = [];
   private memory: MemorySystem;
+  private sdkDeps: SDKDependencies;
 
   constructor(configPath?: string) {
     // Load configuration
@@ -83,7 +84,10 @@ export class TonnetApp {
 
     const db = getDatabase().getDb();
 
-    // Load built-in plugin modules (casino, etc.)
+    // SDK dependencies (shared by built-in plugins and external plugins)
+    this.sdkDeps = { bridge: this.bridge };
+
+    // Load built-in plugin modules (casino, deals, market)
     this.modules = loadModules(this.toolRegistry, this.config, db);
 
     // Initialize per-group module permissions
@@ -143,8 +147,7 @@ ${blue}  ┌──────────────────────�
 
     // Load enhanced plugins from ~/.teleton/plugins/
     const builtinNames = this.modules.map((m) => m.name);
-    const sdkDeps: SDKDependencies = { bridge: this.bridge };
-    const externalModules = await loadEnhancedPlugins(this.config, builtinNames, sdkDeps);
+    const externalModules = await loadEnhancedPlugins(this.config, builtinNames, this.sdkDeps);
     let pluginToolCount = 0;
     for (const mod of externalModules) {
       try {
