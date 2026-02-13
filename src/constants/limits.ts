@@ -35,8 +35,8 @@ export const VOYAGE_BATCH_SIZE = 128;
 /** SQLite cache size in KB (64MB) */
 export const SQLITE_CACHE_SIZE_KB = 64_000;
 
-/** SQLite mmap size in bytes (30GB) */
-export const SQLITE_MMAP_SIZE = 30_000_000_000;
+/** SQLite mmap size in bytes (256MB — sufficient for DBs under 100MB) */
+export const SQLITE_MMAP_SIZE = 256_000_000;
 
 /** Seconds in a day (24 * 60 * 60) */
 export const SECONDS_PER_DAY = 86_400;

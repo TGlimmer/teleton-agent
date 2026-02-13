@@ -325,9 +325,13 @@ export class TelegramBridge {
     const isChannel = msg.post ?? false;
     const isGroup = !isChannel && chatId.startsWith("-");
 
-    // Cache the peer for replying later
+    // Cache the peer for replying later (FIFO eviction at 1000 entries)
     if (msg.peerId) {
       this.peerCache.set(chatId, msg.peerId);
+      if (this.peerCache.size > 1000) {
+        const oldest = this.peerCache.keys().next().value;
+        if (oldest !== undefined) this.peerCache.delete(oldest);
+      }
     }
 
     // Fetch sender info

@@ -44,6 +44,7 @@ export class MarketPriceService {
   private db: Database.Database | null = null;
   private scraperService: MarketScraperService;
   private refreshIntervalId: NodeJS.Timeout | null = null;
+  private initialTimeoutId: NodeJS.Timeout | null = null;
   private isStarted = false;
   private cacheTtlMs: number;
   private fullRefreshIntervalMs: number;
@@ -93,7 +94,8 @@ export class MarketPriceService {
       );
 
       // Schedule first refresh at calculated time
-      setTimeout(() => {
+      this.initialTimeoutId = setTimeout(() => {
+        this.initialTimeoutId = null;
         this.backgroundRefresh();
 
         // After first refresh, schedule regular interval
@@ -113,6 +115,10 @@ export class MarketPriceService {
    * Stop the service
    */
   stop(): void {
+    if (this.initialTimeoutId) {
+      clearTimeout(this.initialTimeoutId);
+      this.initialTimeoutId = null;
+    }
     if (this.refreshIntervalId) {
       clearInterval(this.refreshIntervalId);
       this.refreshIntervalId = null;

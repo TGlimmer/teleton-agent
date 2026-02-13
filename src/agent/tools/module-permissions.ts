@@ -55,7 +55,7 @@ export class ModulePermissions {
   /** Set the level for a module in a chat. Throws if module is protected. */
   setLevel(chatId: string, module: string, level: ModuleLevel, userId?: number): void {
     if (PROTECTED_MODULES.has(module)) {
-      throw new Error(`Module "${module}" est protégé`);
+      throw new Error(`Module "${module}" is protected`);
     }
 
     if (level === "open") {

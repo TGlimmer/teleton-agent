@@ -59,11 +59,22 @@ class RateLimiter {
     timestamps = timestamps.filter((t) => t > oneMinuteAgo);
 
     if (timestamps.length >= this.groupsPerMinute) {
+      this.groupTimestamps.set(groupId, timestamps);
       return false;
     }
 
     timestamps.push(now);
     this.groupTimestamps.set(groupId, timestamps);
+
+    // Evict stale group entries (no activity in >1 min)
+    if (this.groupTimestamps.size > 500) {
+      for (const [id, ts] of this.groupTimestamps) {
+        if (ts.length === 0 || ts[ts.length - 1] <= oneMinuteAgo) {
+          this.groupTimestamps.delete(id);
+        }
+      }
+    }
+
     return true;
   }
 }

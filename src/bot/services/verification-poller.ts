@@ -212,7 +212,8 @@ export class VerificationPoller {
         (g: any) =>
           g.slug === deal.userGivesGiftSlug &&
           Number(g.fromId) === deal.userId &&
-          (g.date || Date.now()) >= deal.createdAt * 1000
+          g.date &&
+          g.date >= deal.createdAt
       );
 
       if (matchingGift) {

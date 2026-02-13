@@ -1,17 +1,4 @@
 import Database from "better-sqlite3";
-import { join } from "path";
-import { TELETON_ROOT } from "../workspace/paths.js";
-
-const DB_PATH = join(TELETON_ROOT, "gifts.db");
-
-/**
- * Get database connection
- */
-export function getDb(): Database.Database {
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
-  return db;
-}
 
 /**
  * Get all collections

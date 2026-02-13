@@ -57,19 +57,6 @@ export class MarketScraperService {
   }
 
   /**
-   * Scrape a single collection (~5 sec)
-   * Currently not implemented
-   * Would require modifications to support single-collection mode
-   */
-  async scrapeSingleCollection(address: string): Promise<ScrapeResult> {
-    console.log(`🔄 Single collection scrape not yet implemented for ${address}`);
-    return {
-      success: false,
-      error: "Single collection scrape not yet implemented",
-    };
-  }
-
-  /**
    * Check if scrape is currently running
    */
   isScrapingActive(): boolean {

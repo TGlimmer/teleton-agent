@@ -33,30 +33,6 @@ export function formatAsset(
 }
 
 /**
- * Format deal summary for display
- */
-export function formatDealSummary(deal: Deal): string {
-  const userGives = formatAsset(
-    deal.user_gives_type,
-    deal.user_gives_ton_amount,
-    deal.user_gives_gift_slug
-  );
-  const agentGives = formatAsset(
-    deal.agent_gives_type,
-    deal.agent_gives_ton_amount,
-    deal.agent_gives_gift_slug
-  );
-
-  return `Deal #${deal.id}
-Status: ${deal.status}
-User gives: ${userGives} (${deal.user_gives_value_ton} TON value)
-Agent gives: ${agentGives} (${deal.agent_gives_value_ton} TON value)
-Profit: ${deal.profit_ton?.toFixed(2) || 0} TON
-Created: ${new Date(deal.created_at * 1000).toLocaleString()}
-Expires: ${new Date(deal.expires_at * 1000).toLocaleString()}`;
-}
-
-/**
  * Calculate deal expiry timestamp (2 minutes from now)
  */
 export function calculateExpiry(): number {

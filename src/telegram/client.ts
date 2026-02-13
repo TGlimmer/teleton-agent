@@ -12,6 +12,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "f
 import { dirname } from "path";
 import { createInterface } from "readline";
 import { markdownToTelegramHtml } from "./formatting.js";
+import { withFloodRetry } from "./flood-retry.js";
 
 /** Prompt the user for input via terminal */
 function promptInput(question: string): Promise<string> {
@@ -274,43 +275,20 @@ export class TelegramUserClient {
       parseMode?: "html" | "md" | "md2" | "none";
     }
   ): Promise<Api.Message> {
-    try {
-      // Convert Markdown to Telegram HTML by default
-      const parseMode = options.parseMode ?? "html";
-      const formattedMessage =
-        parseMode === "html" ? markdownToTelegramHtml(options.message) : options.message;
+    // Convert Markdown to Telegram HTML by default
+    const parseMode = options.parseMode ?? "html";
+    const formattedMessage =
+      parseMode === "html" ? markdownToTelegramHtml(options.message) : options.message;
 
-      const result = await this.client.sendMessage(entity as any, {
+    return withFloodRetry(() =>
+      this.client.sendMessage(entity as any, {
         message: formattedMessage,
         replyTo: options.replyTo,
         silent: options.silent,
         parseMode: parseMode === "none" ? undefined : parseMode,
         linkPreview: false,
-      });
-      return result;
-    } catch (error) {
-      if ((error as Error).message.includes("FLOOD_WAIT")) {
-        const match = (error as Error).message.match(/(\d+)/);
-        const seconds = match ? parseInt(match[1]) : 30;
-        console.warn(`Rate limited, waiting ${seconds}s...`);
-        await new Promise((r) => setTimeout(r, seconds * 1000));
-
-        // Convert again for retry
-        const parseMode = options.parseMode ?? "html";
-        const formattedMessage =
-          parseMode === "html" ? markdownToTelegramHtml(options.message) : options.message;
-
-        // Retry once
-        return await this.client.sendMessage(entity as any, {
-          message: formattedMessage,
-          replyTo: options.replyTo,
-          silent: options.silent,
-          parseMode: parseMode === "none" ? undefined : parseMode,
-          linkPreview: false,
-        });
-      }
-      throw error;
-    }
+      })
+    );
   }
 
   /**

@@ -9,6 +9,13 @@ import { tonapiFetch, COINGECKO_API_URL } from "../constants/api-endpoints.js";
 
 const WALLET_FILE = join(TELETON_ROOT, "wallet.json");
 
+// ─── Singleton Caches ────────────────────────────────────────────────
+/** Cached wallet data (invalidated on saveWallet) */
+let _walletCache: WalletData | null | undefined; // undefined = not yet loaded
+
+/** Cached key pair derived from mnemonic */
+let _keyPairCache: { publicKey: Buffer; secretKey: Buffer } | null = null;
+
 export interface WalletData {
   version: "w5r1";
   address: string;
@@ -57,21 +64,30 @@ export function saveWallet(wallet: WalletData): void {
 
   // Set file permissions to 600 (owner read/write only)
   chmodSync(WALLET_FILE, 0o600);
+
+  // Invalidate caches so next loadWallet()/getKeyPair() re-reads
+  _walletCache = undefined;
+  _keyPairCache = null;
 }
 
 /**
- * Load wallet from ~/.teleton/wallet.json
+ * Load wallet from ~/.teleton/wallet.json (cached after first read)
  */
 export function loadWallet(): WalletData | null {
+  if (_walletCache !== undefined) return _walletCache;
+
   if (!existsSync(WALLET_FILE)) {
+    _walletCache = null;
     return null;
   }
 
   try {
     const content = readFileSync(WALLET_FILE, "utf-8");
-    return JSON.parse(content) as WalletData;
+    _walletCache = JSON.parse(content) as WalletData;
+    return _walletCache;
   } catch (error) {
     console.error("Failed to load wallet:", error);
+    _walletCache = null;
     return null;
   }
 }
@@ -116,6 +132,20 @@ export async function importWallet(mnemonic: string[]): Promise<WalletData> {
 export function getWalletAddress(): string | null {
   const wallet = loadWallet();
   return wallet?.address || null;
+}
+
+/**
+ * Get cached KeyPair (derives from mnemonic once, then reuses).
+ * Returns null if no wallet is configured.
+ */
+export async function getKeyPair(): Promise<{ publicKey: Buffer; secretKey: Buffer } | null> {
+  if (_keyPairCache) return _keyPairCache;
+
+  const wallet = loadWallet();
+  if (!wallet) return null;
+
+  _keyPairCache = await mnemonicToPrivateKey(wallet.mnemonic);
+  return _keyPairCache;
 }
 
 /**

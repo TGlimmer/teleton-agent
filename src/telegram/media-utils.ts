@@ -87,12 +87,3 @@ export async function downloadAndEncodeMedia(
     return null;
   }
 }
-
-/**
- * Check if a media type is a supported image for Claude vision
- */
-export function isSupportedImageType(mediaType: string | undefined): boolean {
-  if (!mediaType) return false;
-  return mediaType === "photo" || mediaType === "document";
-  // Documents need further MIME type checking during download
-}

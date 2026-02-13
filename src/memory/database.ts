@@ -43,7 +43,7 @@ export class MemoryDatabase {
     this.db.pragma("synchronous = NORMAL");
     this.db.pragma(`cache_size = -${SQLITE_CACHE_SIZE_KB}`); // 64MB cache
     this.db.pragma("temp_store = MEMORY");
-    this.db.pragma(`mmap_size = ${SQLITE_MMAP_SIZE}`); // 30GB mmap
+    this.db.pragma(`mmap_size = ${SQLITE_MMAP_SIZE}`); // 256MB mmap
 
     // Enable foreign keys
     this.db.pragma("foreign_keys = ON");
@@ -77,6 +77,9 @@ export class MemoryDatabase {
     if (this.config.enableVectorSearch) {
       this.loadVectorExtension();
     }
+
+    // Run ANALYZE so the query planner has up-to-date index statistics
+    this.db.exec("ANALYZE");
   }
 
   private loadVectorExtension(): void {

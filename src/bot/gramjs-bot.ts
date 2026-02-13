@@ -15,6 +15,7 @@ import { StringSession } from "telegram/sessions/index.js";
 import { Logger, LogLevel } from "telegram/extensions/Logger.js";
 import bigInt from "big-integer";
 import { GRAMJS_RETRY_DELAY_MS } from "../constants/timeouts.js";
+import { withFloodRetry } from "../telegram/flood-retry.js";
 
 /**
  * Decode Bot API inline_message_id string to GramJS InputBotInlineMessageID TL object.
@@ -73,7 +74,7 @@ export class GramJSBotClient {
   }
 
   isConnected(): boolean {
-    return this.connected;
+    return this.connected && !!this.client.connected;
   }
 
   /**
@@ -86,12 +87,14 @@ export class GramJSBotClient {
   }): Promise<void> {
     if (!this.connected) throw new Error("GramJS bot not connected");
 
-    await this.client.invoke(
-      new Api.messages.SetInlineBotResults({
-        queryId: bigInt(params.queryId),
-        results: params.results,
-        cacheTime: params.cacheTime ?? 0,
-      })
+    await withFloodRetry(() =>
+      this.client.invoke(
+        new Api.messages.SetInlineBotResults({
+          queryId: bigInt(params.queryId),
+          results: params.results,
+          cacheTime: params.cacheTime ?? 0,
+        })
+      )
     );
   }
 
@@ -110,15 +113,17 @@ export class GramJSBotClient {
     const id = decodeInlineMessageId(params.inlineMessageId);
     const dcId = (id as any).dcId as number;
 
-    await this.client.invoke(
-      new Api.messages.EditInlineBotMessage({
-        id,
-        message: params.text,
-        entities: params.entities,
-        replyMarkup: params.replyMarkup,
-        noWebpage: true,
-      }),
-      dcId
+    await withFloodRetry(() =>
+      this.client.invoke(
+        new Api.messages.EditInlineBotMessage({
+          id,
+          message: params.text,
+          entities: params.entities,
+          replyMarkup: params.replyMarkup,
+          noWebpage: true,
+        }),
+        dcId
+      )
     );
   }
 

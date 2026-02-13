@@ -19,6 +19,7 @@ import {
 import { getProviderMetadata, type SupportedProvider } from "../config/providers.js";
 import { buildSystemPrompt } from "../soul/loader.js";
 import { getDatabase } from "../memory/index.js";
+import { sanitizeForContext } from "../utils/sanitize.js";
 import { formatMessageEnvelope } from "../memory/envelope.js";
 import {
   getOrCreateSession,
@@ -280,18 +281,22 @@ export class AgentRuntime {
             maxRelevantChunks: CONTEXT_MAX_RELEVANT_CHUNKS,
           });
 
-          // Build relevant context string
+          // Build relevant context string (sanitize each chunk to prevent stored prompt injection)
           const contextParts: string[] = [];
 
           if (dbContext.relevantKnowledge.length > 0) {
+            const sanitizedKnowledge = dbContext.relevantKnowledge.map((chunk) =>
+              sanitizeForContext(chunk)
+            );
             contextParts.push(
-              `[Relevant knowledge from memory]\n${dbContext.relevantKnowledge.join("\n---\n")}`
+              `[Relevant knowledge from memory]\n${sanitizedKnowledge.join("\n---\n")}`
             );
           }
 
           if (dbContext.relevantFeed.length > 0) {
+            const sanitizedFeed = dbContext.relevantFeed.map((msg) => sanitizeForContext(msg));
             contextParts.push(
-              `[Relevant messages from Telegram feed]\n${dbContext.relevantFeed.join("\n")}`
+              `[Relevant messages from Telegram feed]\n${sanitizedFeed.join("\n")}`
             );
           }
 
@@ -578,8 +583,16 @@ export class AgentRuntime {
         }
       }
 
-      // Use the final response
-      const response = finalResponse!;
+      // Use the final response (guard against null if early exit occurred)
+      if (!finalResponse) {
+        console.error("⚠️ Agentic loop exited early without final response");
+        return {
+          content: "Internal error: Agent loop failed to produce a response.",
+          toolCalls: [],
+        };
+      }
+
+      const response = finalResponse;
 
       // Check if auto-compaction is needed (using updated context from response)
       const newSessionId = await this.compactionManager.checkAndCompact(

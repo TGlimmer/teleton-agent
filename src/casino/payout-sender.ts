@@ -3,8 +3,7 @@
  * Used by casino_spin and casino_dice (auto-payout on win)
  */
 
-import { loadWallet } from "../ton/wallet-service.js";
-import { mnemonicToPrivateKey } from "@ton/crypto";
+import { getKeyPair } from "../ton/wallet-service.js";
 import { WalletContractV5R1, TonClient, toNano, internal } from "@ton/ton";
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../ton/endpoint.js";
@@ -39,17 +38,14 @@ export async function sendPayout(
       };
     }
 
-    // Load casino wallet
-    const walletData = loadWallet();
-    if (!walletData) {
+    // Load cached key pair
+    const keyPair = await getKeyPair();
+    if (!keyPair) {
       return {
         success: false,
         error: "Casino wallet not initialized.",
       };
     }
-
-    // Convert mnemonic to private key
-    const keyPair = await mnemonicToPrivateKey(walletData.mnemonic);
 
     // Create wallet contract
     const wallet = WalletContractV5R1.create({

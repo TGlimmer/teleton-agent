@@ -352,11 +352,11 @@ export class AdminHandler {
    */
   private handleModulesCommand(command: AdminCommand, isGroup: boolean): string {
     if (!this.permissions || !this.registry) {
-      return "❌ Module permissions non disponible";
+      return "❌ Module permissions not available";
     }
 
     if (!isGroup) {
-      return "❌ /modules est uniquement disponible dans les groupes";
+      return "❌ /modules is only available in groups";
     }
 
     const chatId = command.chatId;
@@ -374,7 +374,7 @@ export class AdminHandler {
       case "reset":
         return this.resetModules(chatId, command.args[1]);
       default:
-        return `❌ Sous-commande inconnue: "${sub}"\n\nUsage: /modules | /modules set <module> <level> | /modules info <module> | /modules reset [module]`;
+        return `❌ Unknown subcommand: "${sub}"\n\nUsage: /modules | /modules set <module> <level> | /modules info <module> | /modules reset [module]`;
     }
   }
 
@@ -382,7 +382,7 @@ export class AdminHandler {
     const modules = this.registry!.getAvailableModules();
     const overrides = this.permissions!.getOverrides(chatId);
 
-    const lines: string[] = ["🧩 **Modules** (ce groupe)\n"];
+    const lines: string[] = ["🧩 **Modules** (this group)\n"];
 
     for (const mod of modules) {
       const count = this.registry!.getModuleToolCount(mod);
@@ -408,7 +408,7 @@ export class AdminHandler {
     }
 
     lines.push("");
-    lines.push("Niveaux: `open` | `admin` | `disabled`");
+    lines.push("Levels: `open` | `admin` | `disabled`");
     lines.push("Usage: `/modules set <module> <level>`");
 
     return lines.join("\n");
@@ -430,17 +430,17 @@ export class AdminHandler {
     // Validate module exists
     const available = this.registry!.getAvailableModules();
     if (!available.includes(module)) {
-      return `❌ Module inconnu: "${module}"`;
+      return `❌ Unknown module: "${module}"`;
     }
 
     // Check protected
     if (this.permissions!.isProtected(module)) {
-      return `⛔ Module "${module}" est protégé`;
+      return `⛔ Module "${module}" is protected`;
     }
 
     // Validate level
     if (!VALID_MODULE_LEVELS.includes(level as any)) {
-      return `❌ Niveau invalide: "${level}". Valide: ${VALID_MODULE_LEVELS.join(", ")}`;
+      return `❌ Invalid level: "${level}". Valid: ${VALID_MODULE_LEVELS.join(", ")}`;
     }
 
     const oldLevel = this.permissions!.getLevel(chatId, module);
@@ -459,7 +459,7 @@ export class AdminHandler {
 
     const available = this.registry!.getAvailableModules();
     if (!available.includes(module)) {
-      return `❌ Module inconnu: "${module}"`;
+      return `❌ Unknown module: "${module}"`;
     }
 
     const tools = this.registry!.getModuleTools(module);
@@ -485,17 +485,17 @@ export class AdminHandler {
       module = module.toLowerCase();
       const available = this.registry!.getAvailableModules();
       if (!available.includes(module)) {
-        return `❌ Module inconnu: "${module}"`;
+        return `❌ Unknown module: "${module}"`;
       }
       if (this.permissions!.isProtected(module)) {
-        return `⛔ Module "${module}" est protégé (déjà open)`;
+        return `⛔ Module "${module}" is protected (already open)`;
       }
       this.permissions!.resetModule(chatId, module);
       return `✅ **${module}** → open`;
     }
 
     this.permissions!.resetAll(chatId);
-    return "✅ Tous les modules remis à **open**";
+    return "✅ All modules reset to **open**";
   }
 
   /**

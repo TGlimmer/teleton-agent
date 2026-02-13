@@ -107,6 +107,13 @@ const MAIN_DB_PATH = join(TELETON_ROOT, "memory.db");
 export function migrateFromMainDb(moduleDb: Database.Database, tables: string[]): number {
   let totalMigrated = 0;
 
+  // Validate table names to prevent SQL injection via interpolation
+  for (const table of tables) {
+    if (!/^[a-z_]+$/.test(table)) {
+      throw new Error(`Invalid table name for migration: "${table}"`);
+    }
+  }
+
   // Skip if any target table already has data (= already migrated)
   for (const table of tables) {
     try {
