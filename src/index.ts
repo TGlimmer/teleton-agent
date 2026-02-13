@@ -13,7 +13,8 @@ import { TELEGRAM_CONNECTION_RETRIES, TELEGRAM_FLOOD_SLEEP_THRESHOLD } from "./c
 import { join } from "path";
 import { ToolRegistry } from "./agent/tools/registry.js";
 import { registerAllTools } from "./agent/tools/register-all.js";
-import { loadPlugins } from "./agent/tools/plugin-loader.js";
+import { loadEnhancedPlugins } from "./agent/tools/plugin-loader.js";
+import type { SDKDependencies } from "./sdk/index.js";
 import { getProviderMetadata, type SupportedProvider } from "./config/providers.js";
 import { loadModules } from "./agent/tools/module-loader.js";
 import { ModulePermissions } from "./agent/tools/module-permissions.js";
@@ -140,9 +141,37 @@ ${blue}  ┌──────────────────────�
       }
     }
 
-    // Load plugins from ~/.teleton/plugins/
-    const pluginCount = await loadPlugins(this.toolRegistry);
-    if (pluginCount > 0) {
+    // Load enhanced plugins from ~/.teleton/plugins/
+    const builtinNames = this.modules.map((m) => m.name);
+    const sdkDeps: SDKDependencies = { bridge: this.bridge };
+    const externalModules = await loadEnhancedPlugins(this.config, builtinNames, sdkDeps);
+    let pluginToolCount = 0;
+    for (const mod of externalModules) {
+      try {
+        mod.configure?.(this.config);
+        mod.migrate?.(getDatabase().getDb());
+        const tools = mod.tools(this.config);
+        for (const { tool, executor, scope } of tools) {
+          if (!this.toolRegistry.has(tool.name)) {
+            this.toolRegistry.register(tool, executor, scope);
+            pluginToolCount++;
+          }
+        }
+        this.modules.push(mod);
+        const toolCount = tools.length;
+        if (toolCount > 0) {
+          console.log(
+            `🔌 Plugin "${mod.name}" v${mod.version}: ${toolCount} tool${toolCount > 1 ? "s" : ""}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `❌ Plugin "${mod.name}" failed to load:`,
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+    if (pluginToolCount > 0) {
       this.toolCount = this.toolRegistry.count;
     }
 
@@ -150,7 +179,7 @@ ${blue}  ┌──────────────────────�
     const provider = (this.config.agent.provider || "anthropic") as SupportedProvider;
     const providerMeta = getProviderMetadata(provider);
     console.log(
-      `✅ ${this.toolCount} tools loaded${pluginCount > 0 ? ` (${pluginCount} from plugins)` : ""}`
+      `✅ ${this.toolCount} tools loaded${pluginToolCount > 0 ? ` (${pluginToolCount} from plugins)` : ""}`
     );
     if (providerMeta.toolLimit !== null && this.toolCount > providerMeta.toolLimit) {
       console.warn(
@@ -506,7 +535,11 @@ export async function main(configPath?: string): Promise<void> {
   });
 
   // Handle graceful shutdown with timeout safety net
+  let shutdownInProgress = false;
   const gracefulShutdown = async () => {
+    if (shutdownInProgress) return;
+    shutdownInProgress = true;
+
     const { SHUTDOWN_TIMEOUT_MS } = await import("./constants/timeouts.js");
     const forceExit = setTimeout(() => {
       console.error("⚠️ Shutdown timed out, forcing exit");

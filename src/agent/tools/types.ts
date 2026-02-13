@@ -120,4 +120,8 @@ export interface PluginContext {
   bridge: TelegramBridge;
   db: Database.Database;
   config: Config;
+  /** Plugin-specific config from config.yaml plugins section (external plugins only) */
+  pluginConfig?: Record<string, unknown>;
+  /** Prefixed logger for the plugin (external plugins only) */
+  log?: (...args: unknown[]) => void;
 }

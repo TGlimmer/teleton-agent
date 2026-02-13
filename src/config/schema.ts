@@ -129,6 +129,10 @@ export const ConfigSchema = z.object({
   casino: CasinoConfigSchema,
   deals: DealsConfigSchema,
   market: MarketConfigSchema,
+  plugins: z
+    .record(z.string(), z.unknown())
+    .default({})
+    .describe("Per-plugin config (key = plugin name with underscores)"),
   tonapi_key: z
     .string()
     .optional()
