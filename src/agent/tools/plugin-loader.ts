@@ -48,8 +48,10 @@ interface RawPluginExports {
   stop?: () => Promise<void>;
 }
 
-/** Extended context passed to plugin's start() */
-interface EnhancedPluginContext extends PluginContext {
+/** Extended context passed to plugin's start() (relaxed types for isolated plugins) */
+interface EnhancedPluginContext extends Omit<PluginContext, "db" | "config"> {
+  db: Database.Database | null;
+  config: Record<string, unknown>;
   pluginConfig: Record<string, unknown>;
   log: (...args: unknown[]) => void;
 }

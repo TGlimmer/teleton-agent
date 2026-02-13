@@ -575,6 +575,7 @@ ${blue}  ┌──────────────────────�
       sell_min_floor_percent: sellMinFloorPercent,
     }),
     market: MarketConfigSchema.parse({ enabled: marketEnabled }),
+    plugins: {},
     tonapi_key: tonapiKey,
   };
 
@@ -801,6 +802,7 @@ async function runNonInteractiveOnboarding(
     casino: CasinoConfigSchema.parse({}),
     deals: DealsConfigSchema.parse({}),
     market: MarketConfigSchema.parse({}),
+    plugins: {},
   };
 
   const configYaml = YAML.stringify(config);
