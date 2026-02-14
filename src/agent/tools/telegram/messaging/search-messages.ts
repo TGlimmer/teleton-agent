@@ -20,7 +20,7 @@ export const telegramSearchMessagesTool: Tool = {
     "Search for messages in a Telegram chat by text query. Use this to find past conversations, retrieve specific information, or locate messages containing keywords. Returns matching messages with their content and metadata.",
   parameters: Type.Object({
     chatId: Type.String({
-      description: "The chat ID to search in",
+      description: "Numeric chat ID (e.g. '123456789') or @username. Never use display names.",
     }),
     query: Type.String({
       description: "The search query text to find in messages",
@@ -44,6 +44,15 @@ export const telegramSearchMessagesExecutor: ToolExecutor<SearchMessagesParams> 
 ): Promise<ToolResult> => {
   try {
     const { chatId, query, limit = 50 } = params;
+
+    const isNumeric = /^-?\d+$/.test(chatId);
+    const isUsername = chatId.startsWith("@");
+    if (!isNumeric && !isUsername) {
+      return {
+        success: false,
+        error: `"${chatId}" looks like a display name. Use a numeric chat ID or @username. Call telegram_get_dialogs to find chat IDs.`,
+      };
+    }
 
     // Get underlying GramJS client
     const gramJsClient = context.bridge.getClient().getClient();

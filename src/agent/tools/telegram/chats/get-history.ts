@@ -19,7 +19,7 @@ export const telegramGetHistoryTool: Tool = {
     "Retrieve message history from a Telegram chat. Use this to read past messages and understand conversation context.",
   parameters: Type.Object({
     chatId: Type.String({
-      description: "The chat ID to retrieve history from",
+      description: "Numeric chat ID (e.g. '123456789') or @username. Never use display names.",
     }),
     limit: Type.Optional(
       Type.Number({
@@ -47,6 +47,15 @@ export const telegramGetHistoryExecutor: ToolExecutor<GetHistoryParams> = async 
 ): Promise<ToolResult> => {
   try {
     const { chatId, limit = 50, offsetId } = params;
+
+    const isNumeric = /^-?\d+$/.test(chatId);
+    const isUsername = chatId.startsWith("@");
+    if (!isNumeric && !isUsername) {
+      return {
+        success: false,
+        error: `"${chatId}" looks like a display name. Use a numeric chat ID or @username. Call telegram_get_dialogs to find chat IDs.`,
+      };
+    }
 
     // Get underlying GramJS client
     const gramJsClient = context.bridge.getClient().getClient();
