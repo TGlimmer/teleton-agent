@@ -1,10 +1,6 @@
 import type Database from "better-sqlite3";
 import { JOURNAL_SCHEMA } from "../utils/module-db.js";
 
-/**
- * Compare two semver version strings.
- * Returns: -1 if a < b, 0 if a === b, 1 if a > b
- */
 function compareSemver(a: string, b: string): number {
   const parseVersion = (v: string) => {
     const parts = v.split("-")[0].split(".").map(Number);
@@ -27,11 +23,6 @@ function compareSemver(a: string, b: string): number {
 function versionLessThan(a: string, b: string): boolean {
   return compareSemver(a, b) < 0;
 }
-
-/**
- * SQLite schema for Teleton Memory System
- * Agent Memory (MEMORY.md, sessions, tasks) + Telegram Feed (messages)
- */
 
 export function ensureSchema(db: Database.Database): void {
   db.exec(`
@@ -267,9 +258,6 @@ export function ensureSchema(db: Database.Database): void {
   `);
 }
 
-/**
- * Create vector tables using sqlite-vec extension
- */
 export function ensureVectorTables(db: Database.Database, dimensions: number): void {
   const existingDims = db
     .prepare(
@@ -298,9 +286,6 @@ export function ensureVectorTables(db: Database.Database, dimensions: number): v
   `);
 }
 
-/**
- * Get schema version
- */
 export function getSchemaVersion(db: Database.Database): string | null {
   const row = db.prepare(`SELECT value FROM meta WHERE key = 'schema_version'`).get() as
     | { value: string }
@@ -308,9 +293,6 @@ export function getSchemaVersion(db: Database.Database): string | null {
   return row?.value ?? null;
 }
 
-/**
- * Set schema version
- */
 export function setSchemaVersion(db: Database.Database, version: string): void {
   db.prepare(
     `
@@ -321,11 +303,8 @@ export function setSchemaVersion(db: Database.Database, version: string): void {
   ).run(version);
 }
 
-export const CURRENT_SCHEMA_VERSION = "1.9.0";
+export const CURRENT_SCHEMA_VERSION = "1.10.1";
 
-/**
- * Run migrations to upgrade existing database schema
- */
 export function runMigrations(db: Database.Database): void {
   const currentVersion = getSchemaVersion(db);
   if (!currentVersion || versionLessThan(currentVersion, "1.1.0")) {
@@ -443,6 +422,49 @@ export function runMigrations(db: Database.Database): void {
       console.log("✅ Migration 1.9.0 complete: embedding_cache upgraded to BLOB storage");
     } catch (error) {
       console.error("❌ Migration 1.9.0 failed:", error);
+      throw error;
+    }
+  }
+
+  if (!currentVersion || versionLessThan(currentVersion, "1.10.0")) {
+    console.log("🔄 Running migration 1.10.0: Add tool_config table for runtime tool management");
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS tool_config (
+          tool_name TEXT PRIMARY KEY,
+          enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+          scope TEXT CHECK(scope IN ('always', 'dm-only', 'group-only', 'admin-only')),
+          updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_by INTEGER
+        );
+      `);
+      console.log("✅ Migration 1.10.0 complete: tool_config table created");
+    } catch (error) {
+      console.error("❌ Migration 1.10.0 failed:", error);
+      throw error;
+    }
+  }
+
+  if (!currentVersion || versionLessThan(currentVersion, "1.10.1")) {
+    console.log(
+      "🔄 Running migration 1.10.1: Fix tool_config scope CHECK constraint (add admin-only)"
+    );
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS tool_config_new (
+          tool_name TEXT PRIMARY KEY,
+          enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+          scope TEXT CHECK(scope IN ('always', 'dm-only', 'group-only', 'admin-only')),
+          updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_by INTEGER
+        );
+        INSERT OR IGNORE INTO tool_config_new SELECT * FROM tool_config;
+        DROP TABLE tool_config;
+        ALTER TABLE tool_config_new RENAME TO tool_config;
+      `);
+      console.log("✅ Migration 1.10.1 complete: tool_config CHECK constraint updated");
+    } catch (error) {
+      console.error("❌ Migration 1.10.1 failed:", error);
       throw error;
     }
   }

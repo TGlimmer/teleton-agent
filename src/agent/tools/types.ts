@@ -46,8 +46,9 @@ export type ToolCategory = "data-bearing" | "action";
  * - "always": included in both DMs and groups (default)
  * - "dm-only": excluded from group chats (financial, private tools)
  * - "group-only": excluded from DMs (moderation tools)
+ * - "admin-only": restricted to admin users only
  */
-export type ToolScope = "always" | "dm-only" | "group-only";
+export type ToolScope = "always" | "dm-only" | "group-only" | "admin-only";
 
 /**
  * Tool definition compatible with pi-ai

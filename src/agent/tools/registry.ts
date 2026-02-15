@@ -220,6 +220,10 @@ export class ToolRegistry {
     return filtered;
   }
 
+  isPluginModule(moduleName: string): boolean {
+    return this.pluginToolNames.has(moduleName);
+  }
+
   has(name: string): boolean {
     return this.tools.has(name);
   }
@@ -376,6 +380,22 @@ export class ToolRegistry {
       names.push(tool.name);
     }
     this.pluginToolNames.set(pluginName, names);
+
+    // Seed new tools into DB config (if DB is initialized)
+    if (this.db) {
+      let seeded = false;
+      for (const name of names) {
+        if (!this.toolConfigs.has(name)) {
+          const defaultScope = this.scopes.get(name) ?? "always";
+          initializeToolConfig(this.db, name, true, defaultScope);
+          seeded = true;
+        }
+      }
+      if (seeded) {
+        this.toolConfigs = loadAllToolConfigs(this.db);
+      }
+    }
+
     this.toolArrayCache = null;
   }
 
