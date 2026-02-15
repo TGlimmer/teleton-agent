@@ -36,6 +36,12 @@ export function loadConfig(configPath: string = DEFAULT_CONFIG_PATH): Config {
     throw new Error(`Invalid YAML in ${fullPath}: ${(error as Error).message}`);
   }
 
+  // Backward compatibility: remove deprecated market key before parsing
+  if (raw && typeof raw === "object" && "market" in (raw as Record<string, unknown>)) {
+    console.warn("⚠️  config.market is deprecated and ignored. Use market-api plugin instead.");
+    delete (raw as Record<string, unknown>).market;
+  }
+
   const result = ConfigSchema.safeParse(raw);
   if (!result.success) {
     throw new Error(`Invalid config: ${result.error.message}`);

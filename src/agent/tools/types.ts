@@ -1,7 +1,6 @@
 import type { TSchema } from "@sinclair/typebox";
 import type { TelegramBridge } from "../../telegram/bridge.js";
 import type Database from "better-sqlite3";
-import type { MarketPriceService } from "../../market/price-service.js";
 import type { Config } from "../../config/schema.js";
 
 /**
@@ -18,8 +17,6 @@ export interface ToolContext {
   senderId: number;
   /** Whether this is a group chat */
   isGroup: boolean;
-  /** Market price service for gift floor prices (optional) */
-  marketService?: MarketPriceService;
   /** Full config for accessing API key, model, etc. (optional) */
   config?: Config;
 }
@@ -92,7 +89,7 @@ export interface ToolEntry {
 
 /**
  * Built-in plugin module interface.
- * Modules are self-contained feature packs (deals, market, etc.)
+ * Modules are self-contained feature packs (deals, etc.)
  * that register their own tools, config, and migrations.
  */
 export interface PluginModule {

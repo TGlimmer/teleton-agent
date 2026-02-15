@@ -1,6 +1,15 @@
 import { complete, type Context, type Message, type Model, type Api } from "@mariozechner/pi-ai";
 import { getUtilityModel } from "../agent/client.js";
 import type { SupportedProvider } from "../config/providers.js";
+import {
+  CHARS_PER_TOKEN_ESTIMATE,
+  TOKEN_ESTIMATE_SAFETY_MARGIN,
+  OVERSIZED_MESSAGE_RATIO,
+  ADAPTIVE_CHUNK_RATIO_BASE,
+  ADAPTIVE_CHUNK_RATIO_MIN,
+  ADAPTIVE_CHUNK_RATIO_TRIGGER,
+  DEFAULT_SUMMARY_FALLBACK_TOKENS,
+} from "../constants/limits.js";
 
 export interface SummarizationConfig {
   apiKey: string;
@@ -19,9 +28,7 @@ export interface SummarizationResult {
  * Estimate token count using ~4 chars/token with 20% safety margin.
  */
 export function estimateMessageTokens(content: string): number {
-  const CHARS_PER_TOKEN = 4;
-  const SAFETY_MARGIN = 1.2;
-  return Math.ceil((content.length / CHARS_PER_TOKEN) * SAFETY_MARGIN);
+  return Math.ceil((content.length / CHARS_PER_TOKEN_ESTIMATE) * TOKEN_ESTIMATE_SAFETY_MARGIN);
 }
 
 /**
@@ -112,7 +119,7 @@ export function formatMessagesForSummary(messages: Message[]): string {
 export function isOversizedForSummary(message: Message, contextWindow: number): boolean {
   const content = extractMessageContent(message);
   const tokens = estimateMessageTokens(content);
-  return tokens > contextWindow * 0.5;
+  return tokens > contextWindow * OVERSIZED_MESSAGE_RATIO;
 }
 
 /**
@@ -120,8 +127,8 @@ export function isOversizedForSummary(message: Message, contextWindow: number): 
  * Reduces chunk size when messages are large.
  */
 export function computeAdaptiveChunkRatio(messages: Message[], contextWindow: number): number {
-  const BASE_CHUNK_RATIO = 0.4;
-  const MIN_CHUNK_RATIO = 0.15;
+  const BASE_CHUNK_RATIO = ADAPTIVE_CHUNK_RATIO_BASE;
+  const MIN_CHUNK_RATIO = ADAPTIVE_CHUNK_RATIO_MIN;
 
   if (messages.length === 0) {
     return BASE_CHUNK_RATIO;
@@ -136,7 +143,7 @@ export function computeAdaptiveChunkRatio(messages: Message[], contextWindow: nu
   const avgTokens = totalTokens / messages.length;
   const avgRatio = avgTokens / contextWindow;
 
-  if (avgRatio > 0.1) {
+  if (avgRatio > ADAPTIVE_CHUNK_RATIO_TRIGGER) {
     const reduction = Math.min(avgRatio * 2, BASE_CHUNK_RATIO - MIN_CHUNK_RATIO);
     return Math.max(MIN_CHUNK_RATIO, BASE_CHUNK_RATIO - reduction);
   }
@@ -157,7 +164,7 @@ export async function summarizeViaClaude(params: {
 }): Promise<string> {
   const provider = params.provider || "anthropic";
   const model = getUtilityModel(provider, params.utilityModel);
-  const maxTokens = params.maxSummaryTokens ?? 1000;
+  const maxTokens = params.maxSummaryTokens ?? DEFAULT_SUMMARY_FALLBACK_TOKENS;
   const formatted = formatMessagesForSummary(params.messages);
 
   if (!formatted.trim()) {
@@ -254,7 +261,9 @@ export async function summarizeInChunks(params: {
     const partial = await summarizeViaClaude({
       messages: chunks[i],
       apiKey: params.apiKey,
-      maxSummaryTokens: Math.floor((params.maxSummaryTokens ?? 1000) / 2),
+      maxSummaryTokens: Math.floor(
+        (params.maxSummaryTokens ?? DEFAULT_SUMMARY_FALLBACK_TOKENS) / 2
+      ),
       customInstructions: params.customInstructions,
       provider: params.provider,
       utilityModel: params.utilityModel,
@@ -285,7 +294,7 @@ ${partialSummaries.map((s, i) => `Part ${i + 1}:\n${s}`).join("\n\n---\n\n")}`,
 
   const mergeResponse = await complete(model, mergeContext, {
     apiKey: params.apiKey,
-    maxTokens: params.maxSummaryTokens ?? 1000,
+    maxTokens: params.maxSummaryTokens ?? DEFAULT_SUMMARY_FALLBACK_TOKENS,
   });
 
   const textContent = mergeResponse.content.find((block) => block.type === "text");

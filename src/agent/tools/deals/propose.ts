@@ -43,7 +43,7 @@ CRITICAL - STRATEGY.md ENFORCEMENT:
 - User ALWAYS sends first (TON or gift)
 
 BEFORE proposing:
-1. Get market floor price using market_get_floor
+1. Check gift floor price if market plugin is available
 2. Calculate values in TON
 3. This tool will REJECT deals that violate strategy
 

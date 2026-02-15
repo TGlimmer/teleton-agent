@@ -51,11 +51,21 @@ export class MessageDebouncer {
     const existing = this.buffers.get(key);
 
     if (existing) {
-      existing.messages.push(message);
-      verbose(
-        `📥 [Debouncer] Added to buffer for ${key} (${existing.messages.length} messages waiting)`
-      );
-      this.resetTimer(key, existing);
+      if (existing.messages.length >= this.maxBufferSize) {
+        verbose(
+          `📤 [Debouncer] Buffer full for ${key} (${existing.messages.length}/${this.maxBufferSize}), flushing`
+        );
+        await this.flushKey(key);
+        const newBuffer: DebounceBuffer = { messages: [message], timer: null };
+        this.buffers.set(key, newBuffer);
+        this.resetTimer(key, newBuffer);
+      } else {
+        existing.messages.push(message);
+        verbose(
+          `📥 [Debouncer] Added to buffer for ${key} (${existing.messages.length} messages waiting)`
+        );
+        this.resetTimer(key, existing);
+      }
     } else {
       const buffer: DebounceBuffer = {
         messages: [message],

@@ -59,8 +59,6 @@ export function saveSessionStore(store: SessionStore): void {
   try {
     const db = getDb();
 
-    db.prepare("DELETE FROM sessions").run();
-
     const insertStmt = db.prepare(`
       INSERT INTO sessions (
         id, chat_id, started_at, updated_at, message_count,
@@ -69,22 +67,26 @@ export function saveSessionStore(store: SessionStore): void {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    for (const [chatId, session] of Object.entries(store)) {
-      insertStmt.run(
-        session.sessionId,
-        chatId,
-        session.createdAt,
-        session.updatedAt,
-        session.messageCount,
-        session.lastMessageId,
-        session.lastChannel,
-        session.lastTo,
-        session.contextTokens,
-        session.model,
-        session.provider,
-        session.lastResetDate
-      );
-    }
+    db.transaction(() => {
+      db.prepare("DELETE FROM sessions").run();
+
+      for (const [chatId, session] of Object.entries(store)) {
+        insertStmt.run(
+          session.sessionId,
+          chatId,
+          session.createdAt,
+          session.updatedAt,
+          session.messageCount,
+          session.lastMessageId,
+          session.lastChannel,
+          session.lastTo,
+          session.contextTokens,
+          session.model,
+          session.provider,
+          session.lastResetDate
+        );
+      }
+    })();
   } catch (error) {
     console.error("Failed to save sessions to database:", error);
   }

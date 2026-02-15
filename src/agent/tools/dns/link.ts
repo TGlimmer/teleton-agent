@@ -1,7 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
-import { loadWallet } from "../../../ton/wallet-service.js";
-import { mnemonicToPrivateKey } from "@ton/crypto";
+import { loadWallet, getKeyPair } from "../../../ton/wallet-service.js";
 import { WalletContractV5R1, TonClient, toNano, internal, beginCell } from "@ton/ton";
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
@@ -116,7 +115,10 @@ export const dnsLinkExecutor: ToolExecutor<DnsLinkParams> = async (
       };
     }
 
-    const keyPair = await mnemonicToPrivateKey(walletData.mnemonic);
+    const keyPair = await getKeyPair();
+    if (!keyPair) {
+      return { success: false, error: "Wallet key derivation failed." };
+    }
 
     const wallet = WalletContractV5R1.create({
       workchain: 0,

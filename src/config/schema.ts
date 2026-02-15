@@ -99,14 +99,6 @@ export const DealsConfigSchema = z
   })
   .default({});
 
-export const MarketConfigSchema = z
-  .object({
-    enabled: z.boolean().default(true),
-    cache_ttl_minutes: z.number().default(15),
-    refresh_interval_minutes: z.number().default(120),
-  })
-  .default({});
-
 export const WebUIConfigSchema = z
   .object({
     enabled: z.boolean().default(false).describe("Enable WebUI server"),
@@ -139,7 +131,6 @@ export const ConfigSchema = z.object({
   telegram: TelegramConfigSchema,
   storage: StorageConfigSchema.default({}),
   deals: DealsConfigSchema,
-  market: MarketConfigSchema,
   webui: WebUIConfigSchema,
   dev: DevConfigSchema,
   plugins: z
@@ -158,6 +149,5 @@ export type TelegramConfig = z.infer<typeof TelegramConfigSchema>;
 export type StorageConfig = z.infer<typeof StorageConfigSchema>;
 export type SessionResetPolicy = z.infer<typeof SessionResetPolicySchema>;
 export type DealsConfig = z.infer<typeof DealsConfigSchema>;
-export type MarketConfig = z.infer<typeof MarketConfigSchema>;
 export type WebUIConfig = z.infer<typeof WebUIConfigSchema>;
 export type DevConfig = z.infer<typeof DevConfigSchema>;

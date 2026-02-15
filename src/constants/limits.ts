@@ -16,7 +16,6 @@ export const COMPACTION_MAX_MESSAGES = 200;
 export const COMPACTION_KEEP_RECENT = 20;
 export const COMPACTION_MAX_TOKENS_RATIO = 0.75;
 export const COMPACTION_SOFT_THRESHOLD_RATIO = 0.5;
-export const SCRAPER_PARALLEL_WORKERS = 4;
 export const PENDING_HISTORY_MAX_PER_CHAT = 50;
 export const PENDING_HISTORY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const DEBOUNCE_MAX_MULTIPLIER = 3;
@@ -35,3 +34,32 @@ export const EMBEDDING_CACHE_MAX_ENTRIES = 50_000;
 export const EMBEDDING_CACHE_TTL_DAYS = 60;
 export const EMBEDDING_CACHE_EVICTION_INTERVAL = 1000;
 export const MAX_WRITE_SIZE = 50 * 1024 * 1024;
+
+// ─── Compaction & Summarization ─────────────────────────────────
+export const DEFAULT_MAX_TOKENS = 96_000;
+export const DEFAULT_SOFT_THRESHOLD_TOKENS = 64_000;
+export const FALLBACK_SOFT_THRESHOLD_TOKENS = 6_000;
+export const DEFAULT_CONTEXT_WINDOW = 150_000;
+export const DEFAULT_MAX_SUMMARY_TOKENS = 2_000;
+export const DEFAULT_SUMMARY_FALLBACK_TOKENS = 1_000;
+export const MEMORY_FLUSH_RECENT_MESSAGES = 5;
+
+// ─── Token Estimation ───────────────────────────────────────────
+export const CHARS_PER_TOKEN_ESTIMATE = 4;
+export const TOKEN_ESTIMATE_SAFETY_MARGIN = 1.2;
+
+// ─── Adaptive Chunking ──────────────────────────────────────────
+export const OVERSIZED_MESSAGE_RATIO = 0.5;
+export const ADAPTIVE_CHUNK_RATIO_BASE = 0.4;
+export const ADAPTIVE_CHUNK_RATIO_MIN = 0.15;
+export const ADAPTIVE_CHUNK_RATIO_TRIGGER = 0.1;
+
+// ─── Session Memory Hook ────────────────────────────────────────
+export const SESSION_SLUG_RECENT_MESSAGES = 10;
+export const SESSION_SLUG_MAX_TOKENS = 50;
+
+// ─── Observation Masking ────────────────────────────────────────
+export const MASKING_KEEP_RECENT_COUNT = 10;
+
+// ─── Embedding Cache ────────────────────────────────────────────
+export const EMBEDDING_CACHE_EVICTION_RATIO = 0.1;

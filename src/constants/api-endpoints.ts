@@ -47,7 +47,6 @@ export async function tonapiFetch(
 export const STONFI_API_BASE_URL = "https://api.ston.fi/v1";
 export const GECKOTERMINAL_API_URL = "https://api.geckoterminal.com/api/v2";
 export const COINGECKO_API_URL = "https://api.coingecko.com/api/v3";
-export const MARKETAPP_BASE_URL = "https://marketapp.ws";
 export const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
 export const ELEVENLABS_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 export const VOYAGE_API_URL = "https://api.voyageai.com/v1";

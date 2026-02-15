@@ -66,7 +66,6 @@ The interactive wizard configures everything:
 ├── config.yaml            # Main configuration
 ├── wallet.json            # TON wallet (chmod 600 - backup mnemonic!)
 ├── memory.db              # SQLite database
-├── gifts.db               # Gift market price cache
 ├── telegram_session.txt   # Telegram session
 ├── plugins/               # Custom plugins (auto-loaded at startup)
 └── workspace/             # Sandboxed agent workspace
@@ -97,10 +96,9 @@ You should see:
 ✅ Config loaded from ~/.teleton/config.yaml
 ✅ SOUL.md loaded
 ✅ Knowledge indexed
-✅ Gifts Market: 107 collections, 6000+ models
 ✅ Telegram: @your_agent connected
 ✅ TON Blockchain: connected
-✅ Agent is ready! (116 tools)
+✅ Agent is ready! (112 tools)
 ```
 
 **Verify:** Send `/ping` to your agent on Telegram.
@@ -132,10 +130,6 @@ deals:
   buy_max_floor_percent: 100   # Buy at or below floor price
   sell_min_floor_percent: 105  # Sell at floor + 5% minimum
 
-market:
-  enabled: true
-  cache_ttl_minutes: 15
-  refresh_interval_minutes: 120
 ```
 
 ### Switching LLM Provider
@@ -178,7 +172,7 @@ Admin commands are only available to users listed in `admin_ids`. All commands w
 
 ## Tool Categories
 
-Teleton has **116 tools** across these categories:
+Teleton has **112 tools** across these categories:
 
 | Category | Count | Highlights |
 |----------|-------|------------|
@@ -188,7 +182,6 @@ Teleton has **116 tools** across these categories:
 | **DeDust DEX** | 5 | Swap, quote, pools, prices, token info |
 | **TON DNS** | 7 | Domain check, auctions, bidding, resolution |
 | **Deals** | 5 | Secure gift/TON trading with strategy enforcement and inline bot confirmations |
-| **Market** | 4 | Gift floor prices, search, cheapest listings, price history |
 | **Journal** | 3 | Log trades/operations with reasoning and P&L |
 | **Workspace** | 6 | Sandboxed file operations |
 
@@ -290,16 +283,11 @@ The agent uses a hybrid search system for context-aware responses:
 - **429**: Rate limited - wait and retry, or switch to a different model
 - **Context overflow**: Reduce `max_tokens` or `max_agentic_iterations`
 
-### Gift Prices Null
-- Check if Playwright is installed: `npx playwright install chromium`
-- Scraper runs every 2 hours - use `/task refresh market data` to trigger manually
-- Database location: `~/.teleton/gifts.db`
-
 ### Health Check
 ```bash
 teleton doctor
 ```
-Verifies config, Telegram session, wallet, database, and Playwright.
+Verifies config, Telegram session, wallet, and database.
 
 ---
 
@@ -356,13 +344,12 @@ For contributors, create a TypeScript tool in `src/agent/tools/` and register it
 ```
 src/
 ├── index.ts        # Main application entry point (TeletonApp)
-├── agent/          # LLM runtime, tool registry, 116 tool implementations
+├── agent/          # LLM runtime, tool registry, 112 tool implementations
 │   └── tools/      # telegram/, ton/, stonfi/, dedust/, dns/, journal/, workspace/
 ├── telegram/       # GramJS bridge, message handlers, admin commands, debouncing
 ├── memory/         # SQLite database, RAG search (FTS5 + vector), compaction
 ├── ton/            # Wallet operations, payment verification, TON blockchain
 ├── deals/          # Deal proposals, strategy checker, config
-├── market/         # Gift price scraper (Playwright) and cache service
 ├── bot/            # Grammy + GramJS bot for styled inline deal buttons
 ├── sdk/            # Plugin SDK (v1.0.0) — TON, Telegram services for plugins
 ├── session/        # Session persistence, transcripts

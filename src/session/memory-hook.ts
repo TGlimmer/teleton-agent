@@ -4,6 +4,11 @@ import { complete, type Context } from "@mariozechner/pi-ai";
 import { summarizeViaClaude, formatMessagesForSummary } from "../memory/ai-summarization.js";
 import { getUtilityModel } from "../agent/client.js";
 import type { SupportedProvider } from "../config/providers.js";
+import {
+  SESSION_SLUG_RECENT_MESSAGES,
+  SESSION_SLUG_MAX_TOKENS,
+  DEFAULT_MAX_SUMMARY_TOKENS,
+} from "../constants/limits.js";
 
 /**
  * Generate a semantic slug for a session using LLM.
@@ -18,7 +23,7 @@ async function generateSlugViaClaude(params: {
   const provider = params.provider || "anthropic";
   const model = getUtilityModel(provider, params.utilityModel);
 
-  const formatted = formatMessagesForSummary(params.messages.slice(-10));
+  const formatted = formatMessagesForSummary(params.messages.slice(-SESSION_SLUG_RECENT_MESSAGES));
 
   if (!formatted.trim()) {
     return "empty-session";
@@ -43,7 +48,7 @@ Slug:`,
 
     const response = await complete(model, context, {
       apiKey: params.apiKey,
-      maxTokens: 50,
+      maxTokens: SESSION_SLUG_MAX_TOKENS,
     });
 
     const textContent = response.content.find((block) => block.type === "text");
@@ -104,7 +109,7 @@ export async function saveSessionMemory(params: {
       summary = await summarizeViaClaude({
         messages: params.context.messages,
         apiKey: params.apiKey,
-        maxSummaryTokens: 2000,
+        maxSummaryTokens: DEFAULT_MAX_SUMMARY_TOKENS,
         customInstructions:
           "Summarize this session comprehensively. Include key topics, decisions made, problems solved, and important context.",
         provider: params.provider,

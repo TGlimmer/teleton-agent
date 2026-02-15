@@ -5,6 +5,7 @@ import {
   EMBEDDING_CACHE_MAX_ENTRIES,
   EMBEDDING_CACHE_TTL_DAYS,
   EMBEDDING_CACHE_EVICTION_INTERVAL,
+  EMBEDDING_CACHE_EVICTION_RATIO,
 } from "../../constants/limits.js";
 
 /**
@@ -144,7 +145,7 @@ export class CachedEmbeddingProvider implements EmbeddingProvider {
       ).cnt;
 
       if (count > EMBEDDING_CACHE_MAX_ENTRIES) {
-        const toDelete = Math.ceil(count * 0.1);
+        const toDelete = Math.ceil(count * EMBEDDING_CACHE_EVICTION_RATIO);
         this.db
           .prepare(
             `DELETE FROM embedding_cache WHERE (hash, model, provider) IN (

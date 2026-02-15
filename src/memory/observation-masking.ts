@@ -1,5 +1,6 @@
 import type { Message, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ToolRegistry } from "../agent/tools/registry.js";
+import { MASKING_KEEP_RECENT_COUNT } from "../constants/limits.js";
 
 export interface MaskingConfig {
   keepRecentCount: number; // Keep the N most recent tool results complete
@@ -7,7 +8,7 @@ export interface MaskingConfig {
 }
 
 export const DEFAULT_MASKING_CONFIG: MaskingConfig = {
-  keepRecentCount: 10,
+  keepRecentCount: MASKING_KEEP_RECENT_COUNT,
   keepErrorResults: true,
 };
 

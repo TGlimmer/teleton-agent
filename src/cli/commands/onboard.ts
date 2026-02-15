@@ -5,12 +5,11 @@
 import { createPrompter, CancelledError } from "../prompts.js";
 import { ensureWorkspace, isNewWorkspace } from "../../workspace/manager.js";
 import { writeFileSync, readFileSync, existsSync, chmodSync } from "fs";
-import { execSync } from "child_process";
 import { join } from "path";
 import { TELETON_ROOT } from "../../workspace/paths.js";
 import { TelegramUserClient } from "../../telegram/client.js";
 import YAML from "yaml";
-import { type Config, DealsConfigSchema, MarketConfigSchema } from "../../config/schema.js";
+import { type Config, DealsConfigSchema } from "../../config/schema.js";
 import {
   generateWallet,
   importWallet,
@@ -24,7 +23,6 @@ import {
   validateApiKeyFormat,
   type SupportedProvider,
 } from "../../config/providers.js";
-import { ONBOARDING_PROMPT_TIMEOUT_MS } from "../../constants/timeouts.js";
 import { TELEGRAM_MAX_MESSAGE_LENGTH } from "../../constants/limits.js";
 import { fetchWithTimeout } from "../../utils/fetch.js";
 
@@ -159,15 +157,14 @@ ${blue}  ┌──────────────────────�
     options: [
       {
         value: "deals",
-        label: "Gifts (Deals & Market Data)",
-        hint: "Gift/TON trading + floor price scraping (requires Chromium)",
+        label: "Gifts & Deals",
+        hint: "Gift/TON trading with escrow system",
       },
     ],
     required: false,
   });
 
   const dealsEnabled = enabledModules.includes("deals");
-  const marketEnabled = dealsEnabled; // Market data is required for deals
 
   // AI Provider selection
   const providers = getSupportedProviders();
@@ -566,7 +563,6 @@ ${blue}  ┌──────────────────────�
       buy_max_floor_percent: buyMaxFloorPercent,
       sell_min_floor_percent: sellMinFloorPercent,
     }),
-    market: MarketConfigSchema.parse({ enabled: marketEnabled }),
     webui: {
       enabled: false,
       port: 7777,
@@ -628,22 +624,6 @@ ${blue}  ┌──────────────────────�
     wallet = await generateWallet();
     saveWallet(wallet);
     spinner.stop("✓ TON wallet generated");
-  }
-
-  // Install Playwright browser for market scraping (only if market enabled)
-  if (marketEnabled) {
-    spinner.start("Installing browser for market data...");
-    try {
-      execSync("npx playwright install chromium", {
-        stdio: "pipe",
-        timeout: ONBOARDING_PROMPT_TIMEOUT_MS,
-      });
-      spinner.stop("✓ Browser installed");
-    } catch {
-      spinner.stop(
-        "⚠ Browser install failed (can be done later with: npx playwright install chromium)"
-      );
-    }
   }
 
   // Display mnemonic (only for new/regenerated wallets, not for kept ones)
@@ -800,7 +780,6 @@ async function runNonInteractiveOnboarding(
       history_limit: 100,
     },
     deals: DealsConfigSchema.parse({}),
-    market: MarketConfigSchema.parse({}),
     webui: {
       enabled: false,
       port: 7777,

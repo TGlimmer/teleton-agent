@@ -292,7 +292,10 @@ export class TelegramBridge {
       if (sender && "bot" in sender) {
         isBot = (sender as any).bot ?? false;
       }
-    } catch (e) {}
+    } catch (e) {
+      // getSender() can fail on deleted accounts, timeouts, etc.
+      // Non-critical: message still processed with default sender info
+    }
 
     const hasMedia = !!(
       msg.photo ||

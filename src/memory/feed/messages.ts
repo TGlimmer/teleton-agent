@@ -48,38 +48,40 @@ export class MessageStore {
       this.vectorEnabled && message.text ? await this.embedder.embedQuery(message.text) : [];
     const embeddingBuffer = serializeEmbedding(embedding);
 
-    this.db
-      .prepare(
-        `
-      INSERT OR REPLACE INTO tg_messages (
-        id, chat_id, sender_id, text, embedding, reply_to_id,
-        is_from_agent, has_media, media_type, timestamp
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `
-      )
-      .run(
-        message.id,
-        message.chatId,
-        message.senderId,
-        message.text,
-        embeddingBuffer,
-        message.replyToId,
-        message.isFromAgent ? 1 : 0,
-        message.hasMedia ? 1 : 0,
-        message.mediaType,
-        message.timestamp
-      );
-
-    if (this.vectorEnabled && embedding.length > 0 && message.text) {
-      this.db.prepare(`DELETE FROM tg_messages_vec WHERE id = ?`).run(message.id);
+    this.db.transaction(() => {
       this.db
-        .prepare(`INSERT INTO tg_messages_vec (id, embedding) VALUES (?, ?)`)
-        .run(message.id, embeddingBuffer);
-    }
+        .prepare(
+          `
+        INSERT OR REPLACE INTO tg_messages (
+          id, chat_id, sender_id, text, embedding, reply_to_id,
+          is_from_agent, has_media, media_type, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `
+        )
+        .run(
+          message.id,
+          message.chatId,
+          message.senderId,
+          message.text,
+          embeddingBuffer,
+          message.replyToId,
+          message.isFromAgent ? 1 : 0,
+          message.hasMedia ? 1 : 0,
+          message.mediaType,
+          message.timestamp
+        );
 
-    this.db
-      .prepare(`UPDATE tg_chats SET last_message_at = ?, last_message_id = ? WHERE id = ?`)
-      .run(message.timestamp, message.id, message.chatId);
+      if (this.vectorEnabled && embedding.length > 0 && message.text) {
+        this.db.prepare(`DELETE FROM tg_messages_vec WHERE id = ?`).run(message.id);
+        this.db
+          .prepare(`INSERT INTO tg_messages_vec (id, embedding) VALUES (?, ?)`)
+          .run(message.id, embeddingBuffer);
+      }
+
+      this.db
+        .prepare(`UPDATE tg_chats SET last_message_at = ?, last_message_id = ? WHERE id = ?`)
+        .run(message.timestamp, message.id, message.chatId);
+    })();
   }
 
   getRecentMessages(chatId: string, limit: number = 20): TelegramMessage[] {

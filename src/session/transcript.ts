@@ -81,14 +81,18 @@ function sanitizeMessages(
       const toolCallId =
         (msg as any).toolCallId || (msg as any).tool_use_id || (msg as any).tool_call_id;
 
-      if (toolCallId && pendingToolCallIds.has(toolCallId)) {
+      if (!toolCallId || typeof toolCallId !== "string") {
+        removedCount++;
+        console.warn(`🧹 Removing toolResult with missing/invalid toolCallId`);
+        continue;
+      }
+
+      if (pendingToolCallIds.has(toolCallId)) {
         pendingToolCallIds.delete(toolCallId);
         sanitized.push(msg);
       } else {
         removedCount++;
-        console.warn(
-          `🧹 Removing out-of-order/orphaned toolResult: ${toolCallId?.slice(0, 20)}...`
-        );
+        console.warn(`🧹 Removing orphaned toolResult: ${toolCallId.slice(0, 20)}...`);
         continue;
       }
     } else if (msg.role === "user") {

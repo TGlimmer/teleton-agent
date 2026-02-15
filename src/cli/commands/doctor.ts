@@ -1,7 +1,5 @@
 import { existsSync, readFileSync, statSync } from "fs";
 import { join } from "path";
-import { homedir } from "os";
-import { execSync } from "child_process";
 import { parse } from "yaml";
 import { ConfigSchema } from "../../config/schema.js";
 import { TELETON_ROOT } from "../../workspace/paths.js";
@@ -315,77 +313,6 @@ async function checkTelegramSession(workspaceDir: string): Promise<CheckResult> 
   }
 }
 
-async function checkMarketData(workspaceDir: string): Promise<CheckResult> {
-  const dbPath = join(workspaceDir, "gifts.db");
-
-  if (!existsSync(dbPath)) {
-    return {
-      name: "Gift market data",
-      status: "warn",
-      message: "Not found (will fetch on first start)",
-    };
-  }
-
-  try {
-    // Import database module to check stats
-    const Database = (await import("better-sqlite3")).default;
-    const db = new Database(dbPath, { readonly: true });
-
-    // Get stats
-    const collections = db.prepare("SELECT COUNT(*) as count FROM gift_collections").get() as any;
-    const models = db.prepare("SELECT COUNT(*) as count FROM gift_models").get() as any;
-    const lastUpdate = db
-      .prepare("SELECT MAX(updated_at) as last FROM gift_collections")
-      .get() as any;
-
-    db.close();
-
-    if (!lastUpdate.last) {
-      return {
-        name: "Gift market data",
-        status: "warn",
-        message: "Database empty (no data yet)",
-      };
-    }
-
-    // Parse last update time (SQLite stores without Z suffix)
-    const lastUpdateTime = new Date(lastUpdate.last + "Z").getTime();
-    const age = Date.now() - lastUpdateTime;
-    const hoursAgo = Math.floor(age / (1000 * 60 * 60));
-    const daysAgo = Math.floor(hoursAgo / 24);
-
-    const dataInfo = `${collections.count} collections, ${models.count} models`;
-
-    if (daysAgo > 7) {
-      return {
-        name: "Gift market data",
-        status: "warn",
-        message: `Stale (${daysAgo} days old) - ${dataInfo}`,
-      };
-    }
-
-    if (hoursAgo > 24) {
-      return {
-        name: "Gift market data",
-        status: "ok",
-        message: `${daysAgo} day${daysAgo > 1 ? "s" : ""} old - ${dataInfo}`,
-      };
-    }
-
-    return {
-      name: "Gift market data",
-      status: "ok",
-      message: hoursAgo === 0 ? `Fresh (< 1h) - ${dataInfo}` : `${hoursAgo}h old - ${dataInfo}`,
-    };
-  } catch (err) {
-    return {
-      name: "Gift market data",
-      status: "error",
-      message: `Database error: ${err instanceof Error ? err.message : String(err)}`,
-    };
-  }
-}
-
 async function checkModel(workspaceDir: string): Promise<CheckResult> {
   const configPath = join(workspaceDir, "config.yaml");
 
@@ -483,49 +410,6 @@ async function checkNodeVersion(): Promise<CheckResult> {
   };
 }
 
-async function checkPlaywrightBrowser(): Promise<CheckResult> {
-  // Check common browser cache locations
-  const homeDir = homedir();
-  const browserPaths = [
-    join(homeDir, ".cache", "ms-playwright", "chromium-*"),
-    join(homeDir, ".cache", "ms-playwright"),
-    join(homeDir, "Library", "Caches", "ms-playwright"),
-    join(homeDir, "AppData", "Local", "ms-playwright"),
-  ];
-
-  for (const basePath of browserPaths) {
-    const checkPath = basePath.replace("/chromium-*", "");
-    if (existsSync(checkPath)) {
-      // Check if chromium folder exists inside
-      try {
-        const { readdirSync } = await import("fs");
-        const contents = readdirSync(checkPath);
-        const hasChromium = contents.some((f) => f.startsWith("chromium"));
-        if (hasChromium) {
-          return {
-            name: "Playwright browser",
-            status: "ok",
-            message: "Chromium installed",
-          };
-        }
-      } catch {
-        // Directory exists but can't read - assume OK
-        return {
-          name: "Playwright browser",
-          status: "ok",
-          message: "Cache found",
-        };
-      }
-    }
-  }
-
-  return {
-    name: "Playwright browser",
-    status: "warn",
-    message: "Not found (run: npx playwright install chromium)",
-  };
-}
-
 export async function doctorCommand(): Promise<void> {
   const workspaceDir = TELETON_ROOT;
 
@@ -545,7 +429,6 @@ ${blue}  ┌──────────────────────�
 
   // System checks
   results.push(await checkNodeVersion());
-  results.push(await checkPlaywrightBrowser());
 
   // Config checks
   results.push(await checkConfig(workspaceDir));
@@ -555,7 +438,6 @@ ${blue}  ┌──────────────────────�
   results.push(await checkWallet(workspaceDir));
   results.push(await checkSoul(workspaceDir));
   results.push(await checkDatabase(workspaceDir));
-  results.push(await checkMarketData(workspaceDir));
   results.push(await checkModel(workspaceDir));
   results.push(await checkAdmins(workspaceDir));
 

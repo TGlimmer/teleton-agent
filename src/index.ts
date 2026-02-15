@@ -20,7 +20,6 @@ import { loadModules } from "./agent/tools/module-loader.js";
 import { ModulePermissions } from "./agent/tools/module-permissions.js";
 import { SHUTDOWN_TIMEOUT_MS } from "./constants/timeouts.js";
 import type { PluginModule, PluginContext } from "./agent/tools/types.js";
-import { getMarketService } from "./market/module.js";
 import { PluginWatcher } from "./agent/tools/plugin-watcher.js";
 
 export class TeletonApp {
@@ -86,7 +85,6 @@ export class TeletonApp {
     this.toolRegistry.setPermissions(modulePermissions);
 
     this.toolCount = this.toolRegistry.count;
-    // Market service is created by market module's configure() during loadModules above
     this.messageHandler = new MessageHandler(
       this.bridge,
       this.config.telegram,
@@ -94,8 +92,7 @@ export class TeletonApp {
       db,
       this.memory.embedder,
       getDatabase().isVectorSearchReady(),
-      getMarketService(),
-      this.config // Pass full config for vision tool API key access
+      this.config
     );
 
     this.adminHandler = new AdminHandler(
@@ -462,7 +459,6 @@ ${blue}  ┌──────────────────────�
         chatId: message.chatId,
         isGroup: message.isGroup,
         senderId: message.senderId,
-        marketService: getMarketService() ?? undefined,
         config: this.config,
       };
 

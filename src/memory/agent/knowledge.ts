@@ -57,48 +57,50 @@ export class KnowledgeIndexer {
       return false;
     }
 
-    if (this.vectorEnabled) {
-      this.db
-        .prepare(
-          `DELETE FROM knowledge_vec WHERE id IN (
-            SELECT id FROM knowledge WHERE path = ? AND source = 'memory'
-          )`
-        )
-        .run(relPath);
-    }
-    this.db.prepare(`DELETE FROM knowledge WHERE path = ? AND source = 'memory'`).run(relPath);
-
     const chunks = this.chunkMarkdown(content, relPath);
     const texts = chunks.map((c) => c.text);
     const embeddings = await this.embedder.embedBatch(texts);
 
-    const insert = this.db.prepare(`
-      INSERT INTO knowledge (id, source, path, text, embedding, start_line, end_line, hash)
-      VALUES (?, 'memory', ?, ?, ?, ?, ?, ?)
-    `);
-
-    const insertVec = this.vectorEnabled
-      ? this.db.prepare(`INSERT INTO knowledge_vec (id, embedding) VALUES (?, ?)`)
-      : null;
-
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const embedding = embeddings[i] ?? [];
-
-      insert.run(
-        chunk.id,
-        chunk.path,
-        chunk.text,
-        serializeEmbedding(embedding),
-        chunk.startLine,
-        chunk.endLine,
-        chunk.hash
-      );
-
-      if (insertVec && embedding.length > 0) {
-        insertVec.run(chunk.id, serializeEmbedding(embedding));
+    this.db.transaction(() => {
+      if (this.vectorEnabled) {
+        this.db
+          .prepare(
+            `DELETE FROM knowledge_vec WHERE id IN (
+              SELECT id FROM knowledge WHERE path = ? AND source = 'memory'
+            )`
+          )
+          .run(relPath);
       }
-    }
+      this.db.prepare(`DELETE FROM knowledge WHERE path = ? AND source = 'memory'`).run(relPath);
+
+      const insert = this.db.prepare(`
+        INSERT INTO knowledge (id, source, path, text, embedding, start_line, end_line, hash)
+        VALUES (?, 'memory', ?, ?, ?, ?, ?, ?)
+      `);
+
+      const insertVec = this.vectorEnabled
+        ? this.db.prepare(`INSERT INTO knowledge_vec (id, embedding) VALUES (?, ?)`)
+        : null;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const embedding = embeddings[i] ?? [];
+
+        insert.run(
+          chunk.id,
+          chunk.path,
+          chunk.text,
+          serializeEmbedding(embedding),
+          chunk.startLine,
+          chunk.endLine,
+          chunk.hash
+        );
+
+        if (insertVec && embedding.length > 0) {
+          insertVec.run(chunk.id, serializeEmbedding(embedding));
+        }
+      }
+    })();
 
     return true;
   }

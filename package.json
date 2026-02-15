@@ -75,7 +75,6 @@
     "grammy": "^1.39.3",
     "hono": "^4.11.9",
     "js-tiktoken": "^1.0.21",
-    "playwright": "^1.58.1",
     "sqlite-vec": "^0.1.7-alpha.2",
     "telegram": "^2.26.22",
     "yaml": "^2.7.0",

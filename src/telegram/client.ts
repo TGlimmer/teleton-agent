@@ -279,7 +279,9 @@ export class TelegramUserClient {
           action: new Api.SendMessageTypingAction(),
         })
       );
-    } catch (error) {}
+    } catch {
+      // setTyping() is cosmetic — ignore FloodWait, permission errors, etc.
+    }
   }
 
   async resolveUsername(username: string): Promise<Api.TypeUser | Api.TypeChat | undefined> {

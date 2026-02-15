@@ -53,9 +53,6 @@ export * from "./stories/index.js";
 // Memory (agent self-memory management)
 export * from "./memory/index.js";
 
-// Market (gift floor prices from MarketApp.ws)
-export * from "./market/index.js";
-
 // Tasks (scheduled task management)
 export * from "./tasks/index.js";
 

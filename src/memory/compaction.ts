@@ -6,7 +6,16 @@ import { summarizeWithFallback } from "./ai-summarization.js";
 import { saveSessionMemory } from "../session/memory-hook.js";
 import { encodingForModel } from "js-tiktoken";
 import type { SupportedProvider } from "../config/providers.js";
-import { COMPACTION_MAX_MESSAGES, COMPACTION_KEEP_RECENT } from "../constants/limits.js";
+import {
+  COMPACTION_MAX_MESSAGES,
+  COMPACTION_KEEP_RECENT,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_SOFT_THRESHOLD_TOKENS,
+  FALLBACK_SOFT_THRESHOLD_TOKENS,
+  DEFAULT_CONTEXT_WINDOW,
+  DEFAULT_MAX_SUMMARY_TOKENS,
+  MEMORY_FLUSH_RECENT_MESSAGES,
+} from "../constants/limits.js";
 
 export interface CompactionConfig {
   enabled: boolean;
@@ -20,10 +29,10 @@ export interface CompactionConfig {
 export const DEFAULT_COMPACTION_CONFIG: CompactionConfig = {
   enabled: true,
   maxMessages: COMPACTION_MAX_MESSAGES,
-  maxTokens: 96_000,
+  maxTokens: DEFAULT_MAX_TOKENS,
   keepRecentMessages: COMPACTION_KEEP_RECENT,
   memoryFlushEnabled: true,
-  softThresholdTokens: 64_000,
+  softThresholdTokens: DEFAULT_SOFT_THRESHOLD_TOKENS,
 };
 let tokenizer: ReturnType<typeof encodingForModel> | null = null;
 
@@ -77,7 +86,7 @@ export function shouldFlushMemory(
   }
 
   const tokens = tokenCount ?? calculateContextTokens(context);
-  const softThreshold = config.softThresholdTokens ?? 6000;
+  const softThreshold = config.softThresholdTokens ?? FALLBACK_SOFT_THRESHOLD_TOKENS;
 
   if (tokens >= softThreshold) {
     console.log(`💾 Memory flush needed: ~${tokens} tokens (soft threshold: ${softThreshold})`);
@@ -88,7 +97,7 @@ export function shouldFlushMemory(
 }
 
 function flushMemoryToDailyLog(context: Context): void {
-  const recentMessages = context.messages.slice(-5);
+  const recentMessages = context.messages.slice(-MEMORY_FLUSH_RECENT_MESSAGES);
   const summary: string[] = [];
 
   summary.push("**Recent Context:**\n");
@@ -209,8 +218,8 @@ export async function compactContext(
     const result = await summarizeWithFallback({
       messages: oldMessages,
       apiKey,
-      contextWindow: config.maxTokens ?? 150000,
-      maxSummaryTokens: 2000,
+      contextWindow: config.maxTokens ?? DEFAULT_CONTEXT_WINDOW,
+      maxSummaryTokens: DEFAULT_MAX_SUMMARY_TOKENS,
       customInstructions: `Output a structured summary using EXACTLY these sections:
 
 ## User Intent

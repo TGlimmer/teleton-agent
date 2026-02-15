@@ -118,7 +118,6 @@ export class MessageHandler {
   private ownUserId?: string;
   private pendingHistory: PendingHistory;
   private db: Database.Database;
-  private marketService?: any;
   private chatQueue: ChatQueue = new ChatQueue();
 
   constructor(
@@ -128,7 +127,6 @@ export class MessageHandler {
     db: Database.Database,
     embedder: EmbeddingProvider,
     vectorEnabled: boolean,
-    marketService?: any,
     fullConfig?: Config
   ) {
     this.bridge = bridge;
@@ -136,7 +134,6 @@ export class MessageHandler {
     this.fullConfig = fullConfig;
     this.agent = agent;
     this.db = db;
-    this.marketService = marketService;
     this.rateLimiter = new RateLimiter(
       config.rate_limit_messages_per_second,
       config.rate_limit_groups_per_minute
@@ -326,7 +323,6 @@ export class MessageHandler {
           bridge: this.bridge,
           db: this.db,
           senderId: message.senderId,
-          marketService: this.marketService,
           config: this.fullConfig,
         };
 

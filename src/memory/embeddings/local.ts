@@ -8,10 +8,16 @@ function getExtractor(model: string): Promise<FeatureExtractionPipeline> {
     console.log(`📦 Loading local embedding model: ${model} …`);
     extractorPromise = pipeline("feature-extraction", model, {
       dtype: "fp32",
-    }).then((ext) => {
-      console.log(`✅ Local embedding model ready`);
-      return ext;
-    });
+    })
+      .then((ext) => {
+        console.log(`✅ Local embedding model ready`);
+        return ext;
+      })
+      .catch((err) => {
+        console.error(`❌ Failed to load embedding model: ${(err as Error).message}`);
+        extractorPromise = null;
+        throw err;
+      });
   }
   return extractorPromise;
 }

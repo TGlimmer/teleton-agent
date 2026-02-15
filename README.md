@@ -19,7 +19,7 @@
 - **Multi-Provider LLM**: Anthropic, OpenAI, Google Gemini, xAI Grok, Groq, OpenRouter
 - **TON Blockchain**: Built-in wallet, send/receive TON & jettons, swap on STON.fi and DeDust, NFTs
 - **Persistent memory**: Remembers context across restarts with automatic context management
-- **116 built-in tools**: Messaging, media, blockchain, DEX trading, deals, market, DNS, journaling, and more
+- **112 built-in tools**: Messaging, media, blockchain, DEX trading, deals, DNS, journaling, and more
 - **Plugin SDK**: Extend the agent with custom tools — full access to TON and Telegram APIs via namespaced SDK
 - **Secure by design**: Sandboxed workspace, immutable config, prompt injection defense
 
@@ -37,7 +37,6 @@
 | DeDust DEX | 5 | Swap, quote, pools, prices, token info |
 | TON DNS | 7 | Domain auctions, bidding, linking, resolution, availability checks |
 | Deals | 5 | Secure gift/TON trading with strategy enforcement and inline bot confirmations |
-| Market | 4 | Gift floor prices, search, cheapest listings, price history |
 | Journal | 3 | Trade/operation logging with natural language queries |
 | Workspace | 6 | Sandboxed file operations with path traversal protection |
 
@@ -199,7 +198,7 @@ Teleton includes an **optional web dashboard** for monitoring and configuration.
 ### Features
 
 - **Dashboard**: System status, uptime, model info, session count
-- **Tools Management**: View all 116+ tools grouped by module with scope badges
+- **Tools Management**: View all 112+ tools grouped by module with scope badges
 - **Plugins Browser**: List loaded plugins with manifests
 - **Soul Editor**: Edit SOUL.md, SECURITY.md, STRATEGY.md, MEMORY.md files
 - **Memory Search**: Search knowledge base with hybrid vector+keyword search
@@ -303,10 +302,10 @@ src/
 ├── agent/                  # Core agent runtime
 │   ├── runtime.ts          # Agentic loop orchestration
 │   ├── client.ts           # Multi-provider LLM client
-│   └── tools/              # 116 built-in tools
+│   └── tools/              # 112 built-in tools
 │       ├── register-all.ts # Central tool registration
 │       ├── registry.ts     # Tool registry + scope filtering
-│       ├── module-loader.ts    # Built-in module loading (deals, market)
+│       ├── module-loader.ts    # Built-in module loading (deals)
 │       ├── plugin-loader.ts    # External plugin discovery
 │       ├── telegram/       # Telegram operations (66 tools)
 │       ├── ton/            # TON blockchain + jettons + DEX quote (15 tools)
@@ -319,10 +318,6 @@ src/
 │   ├── module.ts           # Module definition + lifecycle
 │   ├── executor.ts         # Deal execution logic
 │   └── strategy-checker.ts # Trading strategy enforcement
-├── market/                 # Market module (4 tools, loaded via module-loader)
-│   ├── module.ts           # Module definition + lifecycle
-│   ├── price-service.ts    # Gift floor-price tracking
-│   └── scraper.ts          # Market data scraping (Playwright)
 ├── bot/                    # Deals inline bot (Grammy + GramJS)
 │   ├── index.ts            # DealBot (Grammy Bot API)
 │   ├── gramjs-bot.ts       # GramJS MTProto for styled buttons
