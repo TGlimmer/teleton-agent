@@ -14,7 +14,7 @@ import { basename, relative, resolve, sep } from "path";
 import { existsSync } from "fs";
 import { pathToFileURL } from "url";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
-import { adaptPlugin } from "./plugin-loader.js";
+import { adaptPlugin, ensurePluginDeps } from "./plugin-loader.js";
 import type { PluginModule, PluginContext, Tool, ToolExecutor, ToolScope } from "./types.js";
 import type { ToolRegistry } from "./registry.js";
 import type { Config } from "../../config/schema.js";
@@ -60,6 +60,7 @@ export class PluginWatcher {
         "**/*.map",
         "**/*.d.ts",
         "**/*.md",
+        "**/package-lock.json",
       ],
       depth: 1,
       followSymlinks: false,
@@ -88,8 +89,8 @@ export class PluginWatcher {
   private resolvePluginName(filePath: string): string | null {
     const fileName = basename(filePath);
 
-    // Only react to .js file changes
-    if (!fileName.endsWith(".js")) return null;
+    // React to .js and package.json file changes
+    if (!fileName.endsWith(".js") && fileName !== "package.json") return null;
 
     const rel = relative(this.pluginsDir, filePath);
     const segments = rel.split(sep);
@@ -97,8 +98,8 @@ export class PluginWatcher {
     // Defense-in-depth: reject path traversal
     if (segments.some((s) => s === ".." || s === ".")) return null;
 
-    // Directory plugin: pluginName/index.js
-    if (segments.length === 2 && segments[1] === "index.js") {
+    // Directory plugin: pluginName/index.js or pluginName/package.json
+    if (segments.length === 2 && (segments[1] === "index.js" || segments[1] === "package.json")) {
       return segments[0];
     }
 
@@ -193,6 +194,12 @@ export class PluginWatcher {
       const modulePath = this.resolveModulePath(pluginName);
       if (!modulePath) {
         throw new Error(`Plugin file not found for "${pluginName}"`);
+      }
+
+      // 1.5. Install npm deps if package.json exists (directory plugins only)
+      if (basename(modulePath) === "index.js") {
+        const pluginDir = resolve(this.pluginsDir, pluginName);
+        await ensurePluginDeps(pluginDir, pluginName);
       }
 
       // 2. Import with cache bust

@@ -15,6 +15,10 @@
 import { readdirSync, existsSync, statSync } from "fs";
 import { join } from "path";
 import { pathToFileURL } from "url";
+import { execFile } from "child_process";
+import { promisify } from "util";
+
+const execFileAsync = promisify(execFile);
 import { WORKSPACE_PATHS, TELETON_ROOT } from "../../workspace/paths.js";
 import { openModuleDb, createDbWrapper, migrateFromMainDb } from "../../utils/module-db.js";
 import type { PluginModule, PluginContext, Tool, ToolExecutor, ToolScope } from "./types.js";
@@ -290,6 +294,46 @@ export function adaptPlugin(
   return module;
 }
 
+// ─── Plugin Dependency Installation ─────────────────────────────────
+
+/**
+ * Install npm dependencies for a plugin that has a package.json + package-lock.json.
+ * Skips if node_modules is already up-to-date (lockfile mtime check).
+ * Runs `npm ci --ignore-scripts` for deterministic, secure installs.
+ */
+export async function ensurePluginDeps(pluginDir: string, pluginEntry: string): Promise<void> {
+  const pkgJson = join(pluginDir, "package.json");
+  const lockfile = join(pluginDir, "package-lock.json");
+  const nodeModules = join(pluginDir, "node_modules");
+
+  if (!existsSync(pkgJson)) return;
+
+  if (!existsSync(lockfile)) {
+    console.warn(
+      `⚠️  [${pluginEntry}] package.json without package-lock.json — skipping (lockfile required)`
+    );
+    return;
+  }
+
+  // Skip if already installed and lockfile hasn't changed
+  if (existsSync(nodeModules)) {
+    const marker = join(nodeModules, ".package-lock.json");
+    if (existsSync(marker) && statSync(marker).mtimeMs >= statSync(lockfile).mtimeMs) return;
+  }
+
+  console.log(`📦 [${pluginEntry}] Installing dependencies...`);
+  try {
+    await execFileAsync("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], {
+      cwd: pluginDir,
+      timeout: 60_000,
+      env: { ...process.env, NODE_ENV: "production" },
+    });
+    console.log(`📦 [${pluginEntry}] Dependencies installed`);
+  } catch (err) {
+    console.error(`❌ [${pluginEntry}] Failed to install deps: ${String(err).slice(0, 300)}`);
+  }
+}
+
 // ─── Initial Plugin Loading ─────────────────────────────────────────
 
 export async function loadEnhancedPlugins(
@@ -334,6 +378,13 @@ export async function loadEnhancedPlugins(
       pluginPaths.push({ entry, path: modulePath });
     }
   }
+
+  // Phase 1.5: Install npm deps for plugins with package.json
+  await Promise.allSettled(
+    pluginPaths
+      .filter(({ path }) => path.endsWith("index.js"))
+      .map(({ entry }) => ensurePluginDeps(join(pluginsDir, entry), entry))
+  );
 
   // Phase 2: Load plugins in parallel
   const loadResults = await Promise.allSettled(
