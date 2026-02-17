@@ -3,11 +3,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 interface SelectProps {
   value: string;
   options: string[];
+  labels?: string[];
   onChange: (value: string) => void;
   style?: React.CSSProperties;
 }
 
-export function Select({ value, options, onChange, style }: SelectProps) {
+export function Select({ value, options, labels, onChange, style }: SelectProps) {
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
@@ -95,7 +96,7 @@ export function Select({ value, options, onChange, style }: SelectProps) {
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
       >
-        <span>{value}</span>
+        <span>{labels ? labels[options.indexOf(value)] ?? value : value}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -118,7 +119,7 @@ export function Select({ value, options, onChange, style }: SelectProps) {
               onClick={() => { onChange(opt); setOpen(false); }}
               onMouseEnter={() => setFocusIdx(idx)}
             >
-              {opt}
+              {labels ? labels[idx] ?? opt : opt}
             </div>
           ))}
         </div>

@@ -4,7 +4,7 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { WORKSPACE_PATHS } from "../../workspace/paths.js";
 import { adaptPlugin, ensurePluginDeps } from "../../agent/tools/plugin-loader.js";
@@ -14,6 +14,7 @@ import type { MarketplaceDeps, RegistryEntry, MarketplacePlugin } from "../types
 const REGISTRY_URL =
   "https://raw.githubusercontent.com/TONresistor/teleton-plugins/main/registry.json";
 const PLUGIN_BASE_URL = "https://raw.githubusercontent.com/TONresistor/teleton-plugins/main";
+const GITHUB_API_BASE = "https://api.github.com/repos/TONresistor/teleton-plugins/contents";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const PLUGINS_DIR = WORKSPACE_PATHS.PLUGINS_DIR;
 
@@ -80,7 +81,7 @@ export class MarketplaceService {
     if (!Array.isArray(plugins)) throw new Error("Registry has no plugins array");
 
     // Validate each entry — defense-in-depth against poisoned registries
-    const VALID_PATH = /^[a-z0-9][a-z0-9._\/-]*$/;
+    const VALID_PATH = /^[a-zA-Z0-9][a-zA-Z0-9._\/-]*$/;
     for (const entry of plugins) {
       if (!entry.id || !entry.name || !entry.path) {
         throw new Error(`Invalid registry entry: missing required fields (id=${entry.id ?? "?"})`);
@@ -222,30 +223,8 @@ export class MarketplaceService {
       // Create plugin directory
       mkdirSync(pluginDir, { recursive: true });
 
-      // Download required files
-      const filesToFetch = ["index.js", "manifest.json"];
-      const optionalFiles = ["package.json", "package-lock.json"];
-
-      for (const file of filesToFetch) {
-        const url = `${PLUGIN_BASE_URL}/${entry.path}/${file}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to download ${file}: ${res.status}`);
-        const content = await res.text();
-        writeFileSync(join(pluginDir, file), content, "utf-8");
-      }
-
-      for (const file of optionalFiles) {
-        const url = `${PLUGIN_BASE_URL}/${entry.path}/${file}`;
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            const content = await res.text();
-            writeFileSync(join(pluginDir, file), content, "utf-8");
-          }
-        } catch {
-          // Optional files — ignore errors
-        }
-      }
+      // Download the entire plugin directory from GitHub
+      await this.downloadDir(entry.path, pluginDir);
 
       // Install npm deps if package.json exists
       await ensurePluginDeps(pluginDir, pluginId);
@@ -290,8 +269,8 @@ export class MarketplaceService {
       if (existsSync(pluginDir)) {
         try {
           rmSync(pluginDir, { recursive: true, force: true });
-        } catch {
-          // Ignore cleanup errors
+        } catch (cleanupErr) {
+          console.error(`[marketplace] Failed to cleanup ${pluginDir}:`, cleanupErr);
         }
       }
       throw err;
@@ -369,6 +348,53 @@ export class MarketplaceService {
       mod = this.deps.modules.find((m) => m.name === entry.name);
     }
     return mod ?? null;
+  }
+
+  /**
+   * Recursively download a GitHub directory to a local path.
+   * Uses the GitHub Contents API to list files, then fetches each via raw.githubusercontent.
+   */
+  private async downloadDir(remotePath: string, localDir: string, depth = 0): Promise<void> {
+    if (depth > 5) throw new Error("Plugin directory too deeply nested");
+
+    const res = await fetch(`${GITHUB_API_BASE}/${remotePath}`);
+    if (!res.ok) throw new Error(`Failed to list directory "${remotePath}": ${res.status}`);
+    const entries: Array<{
+      name: string;
+      type: string;
+      download_url: string | null;
+      path: string;
+    }> = await res.json();
+
+    for (const item of entries) {
+      // Validate name — block path traversal
+      if (!item.name || /[/\\]/.test(item.name) || item.name === ".." || item.name === ".") {
+        throw new Error(`Invalid entry name in plugin directory: "${item.name}"`);
+      }
+
+      const target = resolve(localDir, item.name);
+      if (!target.startsWith(resolve(PLUGINS_DIR))) {
+        throw new Error(`Path escape detected: ${target}`);
+      }
+
+      if (item.type === "dir") {
+        mkdirSync(target, { recursive: true });
+        await this.downloadDir(item.path, target, depth + 1);
+      } else if (item.type === "file" && item.download_url) {
+        // Validate download URL is from GitHub
+        const url = new URL(item.download_url);
+        if (
+          !url.hostname.endsWith("githubusercontent.com") &&
+          !url.hostname.endsWith("github.com")
+        ) {
+          throw new Error(`Untrusted download host: ${url.hostname}`);
+        }
+        const fileRes = await fetch(item.download_url);
+        if (!fileRes.ok) throw new Error(`Failed to download ${item.name}: ${fileRes.status}`);
+        const content = await fileRes.text();
+        writeFileSync(target, content, "utf-8");
+      }
+    }
   }
 
   private validateId(id: string): void {

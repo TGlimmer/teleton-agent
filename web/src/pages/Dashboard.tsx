@@ -1,17 +1,30 @@
-import { useEffect, useState } from 'react';
-import { api, StatusData, MemoryStats } from '../lib/api';
+import { useEffect, useState, useCallback } from 'react';
+import { api, StatusData, MemoryStats, ToolRagStatus } from '../lib/api';
+import { Select } from '../components/Select';
 
 export function Dashboard() {
   const [status, setStatus] = useState<StatusData | null>(null);
   const [stats, setStats] = useState<MemoryStats | null>(null);
+  const [toolRag, setToolRag] = useState<ToolRagStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([api.getStatus(), api.getMemoryStats()])
-      .then(([statusRes, statsRes]) => {
+  // Local input state — decoupled from server values to avoid sending empty/partial values
+  const [localInputs, setLocalInputs] = useState<Record<string, string>>({});
+
+  const loadData = useCallback(() => {
+    Promise.all([api.getStatus(), api.getMemoryStats(), api.getConfigKeys(), api.getToolRag()])
+      .then(([statusRes, statsRes, configRes, ragRes]) => {
         setStatus(statusRes.data);
         setStats(statsRes.data);
+        setToolRag(ragRes.data);
+        // Sync local inputs from server values
+        const inputs: Record<string, string> = {};
+        for (const c of configRes.data) {
+          if (c.value != null) inputs[c.key] = c.value;
+        }
+        setLocalInputs(inputs);
         setLoading(false);
       })
       .catch((err) => {
@@ -20,16 +33,65 @@ export function Dashboard() {
       });
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const getLocal = (key: string): string => localInputs[key] ?? '';
+
+  const setLocal = (key: string, value: string) => {
+    setLocalInputs((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const saveConfig = async (key: string, value: string) => {
+    if (!value.trim()) return; // never send empty values
+    try {
+      setError(null);
+      await api.setConfigKey(key, value.trim());
+      await loadData();
+      showSuccess(`Saved ${key.split('.').pop()}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const saveToolRag = async (update: { enabled?: boolean; topK?: number }) => {
+    try {
+      const res = await api.updateToolRag(update);
+      setToolRag(res.data);
+      showSuccess('Tool RAG updated');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const showSuccess = (msg: string) => {
+    setSaveSuccess(msg);
+    setTimeout(() => setSaveSuccess(null), 2000);
+  };
+
   if (loading) return <div className="loading">Loading...</div>;
-  if (error) return <div className="alert error">{error}</div>;
   if (!status || !stats) return <div className="alert error">Failed to load dashboard data</div>;
 
   return (
     <div>
       <div className="header">
         <h1>Dashboard</h1>
-        <p>System status and statistics</p>
+        <p>System status and settings</p>
       </div>
+
+      {error && (
+        <div className="alert error" style={{ marginBottom: '14px' }}>
+          {error}
+          <button onClick={() => setError(null)} style={{ marginLeft: '10px', padding: '2px 8px', fontSize: '12px' }}>Dismiss</button>
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div className="alert success" style={{ marginBottom: '16px' }}>
+          {saveSuccess}
+        </div>
+      )}
 
       <div className="stats">
         <div className="stat-card">
@@ -66,6 +128,234 @@ export function Dashboard() {
           <div className="stat-card">
             <h3>Chats</h3>
             <div className="value">{stats.chats}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Agent Settings */}
+      <div className="card">
+        <div className="section-title">Agent</div>
+        <div style={{ display: 'grid', gap: '16px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Provider</label>
+            <Select
+              value={getLocal('agent.provider')}
+              options={['anthropic', 'openai', 'google', 'xai', 'groq', 'openrouter']}
+              onChange={(v) => saveConfig('agent.provider', v)}
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Model</label>
+            <input
+              type="text"
+              value={getLocal('agent.model')}
+              onChange={(e) => setLocal('agent.model', e.target.value)}
+              onBlur={(e) => saveConfig('agent.model', e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveConfig('agent.model', e.currentTarget.value)}
+              style={{ width: '100%' }}
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Temperature (0-2)</label>
+              <input
+                type="number"
+                min="0"
+                max="2"
+                step="0.1"
+                value={getLocal('agent.temperature')}
+                onChange={(e) => setLocal('agent.temperature', e.target.value)}
+                onBlur={(e) => saveConfig('agent.temperature', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveConfig('agent.temperature', e.currentTarget.value)}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Max Tokens</label>
+              <input
+                type="number"
+                min="1"
+                value={getLocal('agent.max_tokens')}
+                onChange={(e) => setLocal('agent.max_tokens', e.target.value)}
+                onBlur={(e) => saveConfig('agent.max_tokens', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveConfig('agent.max_tokens', e.currentTarget.value)}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Max Iterations (1-20)</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={getLocal('agent.max_agentic_iterations')}
+                onChange={(e) => setLocal('agent.max_agentic_iterations', e.target.value)}
+                onBlur={(e) => saveConfig('agent.max_agentic_iterations', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveConfig('agent.max_agentic_iterations', e.currentTarget.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tool RAG Settings */}
+      {toolRag && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div>
+              <div className="section-title" style={{ marginBottom: '4px' }}>Tool RAG</div>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                Semantic tool selection — sends only the most relevant tools to the LLM per message.
+              </p>
+            </div>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={toolRag.enabled}
+                onChange={() => saveToolRag({ enabled: !toolRag.enabled })}
+              />
+              <span className="toggle-track" />
+              <span className="toggle-thumb" />
+            </label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            <span>Indexed: {toolRag.indexed ? 'Yes' : 'No'}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              Top-K:
+              <Select
+                value={String(toolRag.topK)}
+                options={['10', '15', '20', '25', '30', '40', '50']}
+                onChange={(v) => saveToolRag({ topK: Number(v) })}
+                style={{ display: 'inline-block', minWidth: '70px' }}
+              />
+            </span>
+            <span>Total: {toolRag.totalTools}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Telegram Settings */}
+      <div className="card">
+        <div className="section-title">Telegram</div>
+        <div style={{ display: 'grid', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>DM Policy</label>
+              <Select
+                value={getLocal('telegram.dm_policy')}
+                options={['open', 'pairing', 'admin']}
+                onChange={(v) => saveConfig('telegram.dm_policy', v)}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Group Policy</label>
+              <Select
+                value={getLocal('telegram.group_policy')}
+                options={['open', 'admin', 'disabled']}
+                onChange={(v) => saveConfig('telegram.group_policy', v)}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }} htmlFor="require-mention">
+              Require Mention
+            </label>
+            <label className="toggle">
+              <input
+                id="require-mention"
+                type="checkbox"
+                checked={getLocal('telegram.require_mention') === 'true'}
+                onChange={(e) => saveConfig('telegram.require_mention', String(e.target.checked))}
+              />
+              <span className="toggle-track" />
+              <span className="toggle-thumb" />
+            </label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }} htmlFor="typing-sim">
+              Typing Simulation
+            </label>
+            <label className="toggle">
+              <input
+                id="typing-sim"
+                type="checkbox"
+                checked={getLocal('telegram.typing_simulation') === 'true'}
+                onChange={(e) => saveConfig('telegram.typing_simulation', String(e.target.checked))}
+              />
+              <span className="toggle-track" />
+              <span className="toggle-thumb" />
+            </label>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Debounce (ms)</label>
+            <input
+              type="number"
+              min="0"
+              value={getLocal('telegram.debounce_ms')}
+              onChange={(e) => setLocal('telegram.debounce_ms', e.target.value)}
+              onBlur={(e) => saveConfig('telegram.debounce_ms', e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveConfig('telegram.debounce_ms', e.currentTarget.value)}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Session Settings */}
+      <div className="card">
+        <div className="section-title">Session</div>
+        <div style={{ display: 'grid', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }} htmlFor="daily-reset">
+              Daily Reset
+            </label>
+            <label className="toggle">
+              <input
+                id="daily-reset"
+                type="checkbox"
+                checked={getLocal('agent.session_reset_policy.daily_reset_enabled') === 'true'}
+                onChange={(e) =>
+                  saveConfig('agent.session_reset_policy.daily_reset_enabled', String(e.target.checked))
+                }
+              />
+              <span className="toggle-track" />
+              <span className="toggle-thumb" />
+            </label>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Reset Hour (0-23)</label>
+            <Select
+              value={getLocal('agent.session_reset_policy.daily_reset_hour')}
+              options={Array.from({ length: 24 }, (_, i) => String(i))}
+              onChange={(v) => saveConfig('agent.session_reset_policy.daily_reset_hour', v)}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }} htmlFor="idle-expiry">
+              Idle Expiry
+            </label>
+            <label className="toggle">
+              <input
+                id="idle-expiry"
+                type="checkbox"
+                checked={getLocal('agent.session_reset_policy.idle_expiry_enabled') === 'true'}
+                onChange={(e) =>
+                  saveConfig('agent.session_reset_policy.idle_expiry_enabled', String(e.target.checked))
+                }
+              />
+              <span className="toggle-track" />
+              <span className="toggle-thumb" />
+            </label>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Idle Minutes</label>
+            <input
+              type="number"
+              min="1"
+              value={getLocal('agent.session_reset_policy.idle_expiry_minutes')}
+              onChange={(e) => setLocal('agent.session_reset_policy.idle_expiry_minutes', e.target.value)}
+              onBlur={(e) => saveConfig('agent.session_reset_policy.idle_expiry_minutes', e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveConfig('agent.session_reset_policy.idle_expiry_minutes', e.currentTarget.value)}
+              style={{ width: '100%' }}
+            />
           </div>
         </div>
       </div>

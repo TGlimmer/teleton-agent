@@ -10,6 +10,7 @@ export type ConfigKeyType = "string" | "number" | "boolean" | "enum";
 export type ConfigCategory =
   | "API Keys"
   | "Agent"
+  | "Session"
   | "Telegram"
   | "Embedding"
   | "WebUI"
@@ -144,6 +145,44 @@ export const CONFIGURABLE_KEYS: Record<string, ConfigKeyMeta> = {
     parse: (v) => Number(v),
   },
 
+  // ─── Session ───────────────────────────────────────────────────
+  "agent.session_reset_policy.daily_reset_enabled": {
+    type: "boolean",
+    category: "Session",
+    description: "Enable daily session reset at specified hour",
+    sensitive: false,
+    validate: enumValidator(["true", "false"]),
+    mask: identity,
+    parse: (v) => v === "true",
+  },
+  "agent.session_reset_policy.daily_reset_hour": {
+    type: "number",
+    category: "Session",
+    description: "Hour (0-23 UTC) for daily session reset",
+    sensitive: false,
+    validate: numberInRange(0, 23),
+    mask: identity,
+    parse: (v) => Number(v),
+  },
+  "agent.session_reset_policy.idle_expiry_enabled": {
+    type: "boolean",
+    category: "Session",
+    description: "Enable automatic session expiry after idle period",
+    sensitive: false,
+    validate: enumValidator(["true", "false"]),
+    mask: identity,
+    parse: (v) => v === "true",
+  },
+  "agent.session_reset_policy.idle_expiry_minutes": {
+    type: "number",
+    category: "Session",
+    description: "Idle minutes before session expires (minimum 1)",
+    sensitive: false,
+    validate: numberInRange(1, Number.MAX_SAFE_INTEGER),
+    mask: identity,
+    parse: (v) => Number(v),
+  },
+
   // ─── Telegram ──────────────────────────────────────────────────────
   "telegram.bot_username": {
     type: "string",
@@ -219,6 +258,15 @@ export const CONFIGURABLE_KEYS: Record<string, ConfigKeyMeta> = {
     mask: identity,
     parse: identity,
   },
+  "telegram.typing_simulation": {
+    type: "boolean",
+    category: "Telegram",
+    description: "Simulate typing indicator before sending replies",
+    sensitive: false,
+    validate: enumValidator(["true", "false"]),
+    mask: identity,
+    parse: (v) => v === "true",
+  },
 
   // ─── Embedding ─────────────────────────────────────────────────────
   "embedding.provider": {
@@ -280,6 +328,7 @@ export const CONFIGURABLE_KEYS: Record<string, ConfigKeyMeta> = {
 export const CATEGORY_ORDER: ConfigCategory[] = [
   "API Keys",
   "Agent",
+  "Session",
   "Telegram",
   "Embedding",
   "WebUI",

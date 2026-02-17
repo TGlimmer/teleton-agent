@@ -265,6 +265,11 @@ select {
 
 .custom-select {
   position: relative;
+  z-index: 1;
+}
+
+.custom-select:has(.custom-select-menu) {
+  z-index: 200;
 }
 
 .custom-select-trigger {
@@ -372,19 +377,20 @@ a:hover {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.2px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--separator);
 }
 
-.badge.dm { background: var(--accent-dim); color: var(--accent); }
-.badge.group { background: var(--purple-dim); color: var(--purple); }
-.badge.always { background: var(--green-dim); color: var(--green); }
-.badge.info { background: var(--cyan-dim); color: var(--cyan); }
-.badge.warn { background: var(--orange-dim); color: var(--orange); }
-.badge.error { background: var(--red-dim); color: var(--red); }
+.badge.count { color: var(--text); }
+.badge.warn { color: var(--orange); border-color: color-mix(in srgb, var(--orange) 30%, transparent); }
+.badge.error { color: var(--red); border-color: color-mix(in srgb, var(--red) 30%, transparent); }
+.badge.always { color: var(--green); border-color: color-mix(in srgb, var(--green) 30%, transparent); }
 
 /* ---- Tabs ---- */
 
@@ -580,9 +586,34 @@ button.btn-sm {
   border-bottom: none;
 }
 
+/* ---- Accordion header ---- */
+
+.accordion-header {
+  position: relative;
+  z-index: 2;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color 0.15s ease;
+}
+
+.accordion-header:hover {
+  background-color: var(--sidebar-bg);
+}
+
+.accordion-chevron {
+  font-size: 10px;
+  color: var(--text-secondary);
+  width: 12px;
+  flex-shrink: 0;
+}
+
 /* ---- Tool row ---- */
 
 .tool-row {
+  position: relative;
   padding: 10px 14px;
   background: var(--surface);
   border-radius: var(--radius-sm);
