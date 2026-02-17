@@ -171,14 +171,11 @@ export class SessionStore {
 
       if (embedding && this.vectorEnabled) {
         const embeddingBuffer = serializeEmbedding(embedding);
-        const rowid = this.db
-          .prepare(`SELECT rowid FROM knowledge WHERE id = ?`)
-          .get(knowledgeId) as { rowid: number };
 
-        this.db.prepare(`DELETE FROM knowledge_vec WHERE rowid = ?`).run(rowid.rowid);
+        this.db.prepare(`DELETE FROM knowledge_vec WHERE id = ?`).run(knowledgeId);
         this.db
-          .prepare(`INSERT INTO knowledge_vec (rowid, embedding) VALUES (?, ?)`)
-          .run(rowid.rowid, embeddingBuffer);
+          .prepare(`INSERT INTO knowledge_vec (id, embedding) VALUES (?, ?)`)
+          .run(knowledgeId, embeddingBuffer);
       }
 
       console.log(`Indexed session ${sessionId} to knowledge base`);

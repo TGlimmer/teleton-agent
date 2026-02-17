@@ -202,10 +202,22 @@ export function updateSession(
   return rowToSession(updated);
 }
 export function incrementMessageCount(chatId: string): void {
-  const session = getOrCreateSession(chatId);
-  updateSession(chatId, {
-    messageCount: session.messageCount + 1,
-  });
+  const db = getDb();
+  const sessionKey = `telegram:${chatId}`;
+
+  const result = db
+    .prepare(
+      `UPDATE sessions SET message_count = message_count + 1, updated_at = ? WHERE chat_id = ?`
+    )
+    .run(Date.now(), sessionKey);
+
+  // If no row existed, create the session first then increment
+  if (result.changes === 0) {
+    getOrCreateSession(chatId);
+    db.prepare(
+      `UPDATE sessions SET message_count = message_count + 1, updated_at = ? WHERE chat_id = ?`
+    ).run(Date.now(), sessionKey);
+  }
 }
 export function getSession(chatId: string): SessionEntry | null {
   const db = getDb();

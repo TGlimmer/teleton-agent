@@ -255,7 +255,7 @@ export class AdminHandler {
 
   private async handleStopCommand(): Promise<string> {
     console.log("🛑 [Admin] /stop command received - shutting down");
-    setTimeout(() => process.exit(0), 1000);
+    setTimeout(() => process.kill(process.pid, "SIGTERM"), 1000);
     return "🛑 Shutting down...";
   }
 
