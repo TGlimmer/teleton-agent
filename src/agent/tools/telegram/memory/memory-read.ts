@@ -3,6 +3,10 @@ import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { readFileSync, existsSync, readdirSync } from "fs";
 import { join } from "path";
 import { WORKSPACE_PATHS } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 const MEMORY_DIR = WORKSPACE_PATHS.MEMORY_DIR;
 const MEMORY_FILE = WORKSPACE_PATHS.MEMORY;
@@ -177,10 +181,10 @@ export const memoryReadExecutor: ToolExecutor<MemoryReadParams> = async (
       error: `Unknown target: ${target}`,
     };
   } catch (error) {
-    console.error("Error reading memory:", error);
+    log.error({ err: error }, "Error reading memory");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

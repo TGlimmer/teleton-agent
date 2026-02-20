@@ -9,6 +9,9 @@ import type { ToolRegistry } from "./registry.js";
 import type { Config } from "../../config/schema.js";
 import type Database from "better-sqlite3";
 import dealsModule from "../../deals/module.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("ModuleLoader");
 
 const BUILTIN_MODULES: PluginModule[] = [dealsModule];
 
@@ -32,7 +35,7 @@ export function loadModules(
 
       loaded.push(mod);
     } catch (error) {
-      console.error(`❌ Module "${mod.name}" failed to load:`, error);
+      log.error({ err: error }, `Module "${mod.name}" failed to load`);
     }
   }
 

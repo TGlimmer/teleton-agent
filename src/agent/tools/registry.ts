@@ -18,6 +18,10 @@ import {
   type ToolConfig,
 } from "../../memory/tool-config.js";
 import type { ToolIndex } from "./tool-index.js";
+import { getErrorMessage } from "../../utils/errors.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Registry");
 
 export class ToolRegistry {
   private tools: Map<string, RegisteredTool> = new Map();
@@ -165,10 +169,10 @@ export class ToolRegistry {
 
       return result;
     } catch (error) {
-      console.error(`Error executing tool ${toolCall.name}:`, error);
+      log.error({ err: error }, `Error executing tool ${toolCall.name}`);
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
     }
   }
@@ -178,8 +182,8 @@ export class ToolRegistry {
     if (toolLimit === null || all.length <= toolLimit) {
       return all;
     }
-    console.warn(
-      `⚠️ Provider tool limit: ${toolLimit}, registered: ${all.length}. Truncating to ${toolLimit} tools.`
+    log.warn(
+      `Provider tool limit: ${toolLimit}, registered: ${all.length}. Truncating to ${toolLimit} tools.`
     );
     return all.slice(0, toolLimit);
   }
@@ -215,8 +219,8 @@ export class ToolRegistry {
       .map((rt) => rt.tool);
 
     if (toolLimit !== null && filtered.length > toolLimit) {
-      console.warn(
-        `⚠️ Provider tool limit: ${toolLimit}, after scope filter: ${filtered.length}. Truncating to ${toolLimit} tools.`
+      log.warn(
+        `Provider tool limit: ${toolLimit}, after scope filter: ${filtered.length}. Truncating to ${toolLimit} tools.`
       );
       return filtered.slice(0, toolLimit);
     }
@@ -393,8 +397,8 @@ export class ToolRegistry {
     for (const { tool, executor, scope } of newTools) {
       // Prevent overwriting core/other-plugin tools
       if (this.tools.has(tool.name) && !previousNames.has(tool.name)) {
-        console.warn(
-          `[registry] Plugin "${pluginName}" tried to overwrite existing tool "${tool.name}" — skipped`
+        log.warn(
+          `Plugin "${pluginName}" tried to overwrite existing tool "${tool.name}" — skipped`
         );
         continue;
       }
@@ -467,7 +471,7 @@ export class ToolRegistry {
       try {
         cb(removed, added);
       } catch (error) {
-        console.error("[tool-rag] onToolsChanged callback error:", error);
+        log.error({ err: error }, "onToolsChanged callback error");
       }
     }
   }
@@ -512,13 +516,13 @@ export class ToolRegistry {
         }
       }
     } catch (error) {
-      console.warn("[tool-rag] Search failed, falling back to full tool set:", error);
+      log.warn({ err: error }, "Search failed, falling back to full tool set");
       return this.applyLimit(scopeFiltered, toolLimit);
     }
 
     // Fallback: if no results from search, send all scope-filtered
     if (selected.size === 0) {
-      console.warn("[tool-rag] No tools matched query, sending all scope-filtered tools");
+      log.warn("No tools matched query, sending all scope-filtered tools");
       return this.applyLimit(scopeFiltered, toolLimit);
     }
 
@@ -528,8 +532,8 @@ export class ToolRegistry {
 
   private applyLimit(tools: PiAiTool[], toolLimit: number | null): PiAiTool[] {
     if (toolLimit !== null && tools.length > toolLimit) {
-      console.warn(
-        `⚠️ Provider tool limit: ${toolLimit}, selected: ${tools.length}. Truncating to ${toolLimit} tools.`
+      log.warn(
+        `Provider tool limit: ${toolLimit}, selected: ${tools.length}. Truncating to ${toolLimit} tools.`
       );
       return tools.slice(0, toolLimit);
     }

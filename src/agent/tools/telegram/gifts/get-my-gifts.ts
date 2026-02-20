@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Gift catalog cache (module-level, shared across calls)
@@ -238,8 +242,8 @@ export const telegramGetMyGiftsExecutor: ToolExecutor<GetMyGiftsParams> = async 
     const collectibles = gifts.filter((g: any) => g.isCollectible);
 
     const viewingLabel = viewSender ? `sender (${context.senderId})` : userId || "self";
-    console.log(
-      `📦 get_my_gifts: viewing ${viewingLabel}, found ${gifts.length} gifts (${collectibles.length} collectibles)`
+    log.info(
+      `get_my_gifts: viewing ${viewingLabel}, found ${gifts.length} gifts (${collectibles.length} collectibles)`
     );
 
     return {
@@ -258,10 +262,10 @@ export const telegramGetMyGiftsExecutor: ToolExecutor<GetMyGiftsParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error getting gifts:", error);
+    log.error({ err: error }, "Error getting gifts");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

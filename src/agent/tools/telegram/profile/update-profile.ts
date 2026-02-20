@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_update_profile tool
@@ -95,10 +99,10 @@ export const telegramUpdateProfileExecutor: ToolExecutor<UpdateProfileParams> = 
       },
     };
   } catch (error) {
-    console.error("Error updating profile:", error);
+    log.error({ err: error }, "Error updating profile");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

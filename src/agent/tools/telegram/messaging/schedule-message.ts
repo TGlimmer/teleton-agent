@@ -1,7 +1,12 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { TELEGRAM_MAX_MESSAGE_LENGTH } from "../../../../constants/limits.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_schedule_message tool
@@ -84,24 +89,31 @@ export const telegramScheduleMessageExecutor: ToolExecutor<ScheduleMessageParams
         peer: entity,
         message: text,
         scheduleDate: scheduleTimestamp,
-        randomId: Date.now() as any,
+        randomId: randomLong(),
       })
     );
 
-    const resultData = result as any;
+    const messageId =
+      result instanceof Api.Updates && result.updates.length > 0
+        ? ((
+            result.updates.find(
+              (u): u is Api.UpdateNewMessage => u.className === "UpdateNewMessage"
+            ) as Api.UpdateNewMessage | undefined
+          )?.message?.id ?? null)
+        : null;
     return {
       success: true,
       data: {
         chatId,
         scheduledFor: new Date(scheduleTimestamp * 1000).toISOString(),
-        messageId: resultData.updates?.[0]?.id || null,
+        messageId,
       },
     };
   } catch (error) {
-    console.error("Error scheduling Telegram message:", error);
+    log.error({ err: error }, "Error scheduling Telegram message");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

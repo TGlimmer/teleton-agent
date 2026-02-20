@@ -7,6 +7,10 @@ import { StonApiClient } from "@ston-fi/api";
 import { Factory, Asset, PoolType, ReadinessStatus } from "@dedust/sdk";
 import { DEDUST_FACTORY_MAINNET, NATIVE_TON_ADDRESS } from "../dedust/constants.js";
 import { getDecimals, toUnits, fromUnits } from "../dedust/asset-cache.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DexQuoteParams {
   from_asset: string;
   to_asset: string;
@@ -118,7 +122,7 @@ async function getStonfiQuote(
       minOutput: 0,
       rate: 0,
       available: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -211,7 +215,7 @@ async function getDedustQuote(
       minOutput: 0,
       rate: 0,
       available: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -329,10 +333,10 @@ export const dexQuoteExecutor: ToolExecutor<DexQuoteParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dex_quote:", error);
+    log.error({ err: error }, "Error in dex_quote");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

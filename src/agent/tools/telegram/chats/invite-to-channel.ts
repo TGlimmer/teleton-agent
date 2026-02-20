@@ -1,6 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { toLong } from "../../../../utils/gramjs-bigint.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for inviting users to channel
@@ -90,7 +95,7 @@ export const telegramInviteToChannelExecutor: ToolExecutor<InviteToChannelParams
           users.push(
             new Api.InputUser({
               userId: apiUser.id,
-              accessHash: apiUser.accessHash ?? (BigInt(0) as any),
+              accessHash: apiUser.accessHash ?? toLong(0),
             })
           );
           resolved.push(userId);
@@ -112,7 +117,7 @@ export const telegramInviteToChannelExecutor: ToolExecutor<InviteToChannelParams
           users.push(
             new Api.InputUser({
               userId: apiUser.id,
-              accessHash: apiUser.accessHash ?? (BigInt(0) as any),
+              accessHash: apiUser.accessHash ?? toLong(0),
             })
           );
           resolved.push(`@${cleanUsername}`);
@@ -139,7 +144,7 @@ export const telegramInviteToChannelExecutor: ToolExecutor<InviteToChannelParams
       })
     );
 
-    console.log(`📨 invite_to_channel: Invited ${resolved.length} users to ${channel.title}`);
+    log.info(`📨 invite_to_channel: Invited ${resolved.length} users to ${channel.title}`);
 
     return {
       success: true,
@@ -153,7 +158,7 @@ export const telegramInviteToChannelExecutor: ToolExecutor<InviteToChannelParams
       },
     };
   } catch (error: any) {
-    console.error("Error inviting to channel:", error);
+    log.error({ err: error }, "Error inviting to channel");
 
     // Handle common errors
     if (error.message?.includes("CHAT_ADMIN_REQUIRED")) {
@@ -186,7 +191,7 @@ export const telegramInviteToChannelExecutor: ToolExecutor<InviteToChannelParams
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

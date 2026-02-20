@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { getTonPrice } from "../../../ton/wallet-service.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 export const tonPriceTool: Tool = {
   name: "ton_price",
   description: "Get current TON cryptocurrency price in USD. Returns real-time market price.",
@@ -29,10 +33,10 @@ export const tonPriceExecutor: ToolExecutor<{}> = async (params, context): Promi
       },
     };
   } catch (error) {
-    console.error("Error in ton_price:", error);
+    log.error({ err: error }, "Error in ton_price");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

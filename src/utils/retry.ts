@@ -7,6 +7,10 @@ import {
   RETRY_BLOCKCHAIN_MAX_DELAY_MS,
   RETRY_BLOCKCHAIN_TIMEOUT_MS,
 } from "../constants/timeouts.js";
+import { getErrorMessage } from "./errors.js";
+import { createLogger } from "./logger.js";
+
+const log = createLogger("Utils");
 
 export interface RetryOptions {
   maxAttempts?: number;
@@ -40,7 +44,7 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
       return result;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      console.warn(`Retry attempt ${attempt}/${opts.maxAttempts} failed:`, lastError.message);
+      log.warn(`Retry attempt ${attempt}/${opts.maxAttempts} failed: ${lastError.message}`);
 
       if (attempt < opts.maxAttempts) {
         const delay = Math.min(opts.baseDelayMs * Math.pow(2, attempt - 1), opts.maxDelayMs);
@@ -63,7 +67,7 @@ export async function withBlockchainRetry<T>(
       timeout: RETRY_BLOCKCHAIN_TIMEOUT_MS,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = getErrorMessage(error);
     throw new Error(`${operation} failed after retries: ${message}`);
   }
 }

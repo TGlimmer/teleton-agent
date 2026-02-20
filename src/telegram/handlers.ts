@@ -15,7 +15,9 @@ import {
 } from "../agent/tools/telegram/index.js";
 import type { ToolContext } from "../agent/tools/types.js";
 import { TELEGRAM_SEND_TOOLS } from "../constants/tools.js";
-import { verbose } from "../utils/logger.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 import type { PluginMessageEvent } from "@teleton-agent/sdk";
 
 export interface MessageContext {
@@ -263,7 +265,7 @@ export class MessageHandler {
    */
   async handleMessage(message: TelegramMessage): Promise<void> {
     const msgType = message.isGroup ? "group" : message.isChannel ? "channel" : "dm";
-    verbose(
+    log.debug(
       `📨 [Handler] Received ${msgType} message ${message.id} from ${message.senderId} (mentions: ${message.mentionsMe})`
     );
 
@@ -284,9 +286,9 @@ export class MessageHandler {
       };
       for (const hook of this.pluginMessageHooks) {
         hook(event).catch((err) => {
-          console.error(
-            "❌ Plugin onMessage hook error:",
-            err instanceof Error ? err.message : err
+          log.error(
+            { err: err instanceof Error ? err : undefined },
+            `Plugin onMessage hook error: ${err instanceof Error ? err.message : err}`
           );
         });
       }
@@ -306,21 +308,21 @@ export class MessageHandler {
           message.chatId.length > 10
             ? message.chatId.slice(0, 7) + ".." + message.chatId.slice(-2)
             : message.chatId;
-        console.log(`⏭️  Group ${chatShort} msg:${message.id} (not mentioned)`);
+        log.info(`⏭️  Group ${chatShort} msg:${message.id} (not mentioned)`);
       } else {
-        verbose(`Skipping message ${message.id} from ${message.senderId}: ${context.reason}`);
+        log.debug(`Skipping message ${message.id} from ${message.senderId}: ${context.reason}`);
       }
       return;
     }
 
     // 3. Check rate limits
     if (!this.rateLimiter.canSendMessage()) {
-      verbose("Rate limit reached, skipping message");
+      log.debug("Rate limit reached, skipping message");
       return;
     }
 
     if (message.isGroup && !this.rateLimiter.canSendToGroup(message.chatId)) {
-      verbose(`Group rate limit reached for ${message.chatId}`);
+      log.debug(`Group rate limit reached for ${message.chatId}`);
       return;
     }
 
@@ -331,7 +333,7 @@ export class MessageHandler {
         // (GramJS may fire duplicate NewMessage events during reconnection)
         const postQueueOffset = readOffset(message.chatId) ?? 0;
         if (message.id <= postQueueOffset) {
-          verbose(`Skipping message ${message.id} (already processed after queue wait)`);
+          log.debug(`Skipping message ${message.id} (already processed after queue wait)`);
           return;
         }
 
@@ -419,9 +421,9 @@ export class MessageHandler {
         // Mark as processed AFTER successful handling (prevents message loss on crash)
         writeOffset(message.id, message.chatId);
 
-        verbose(`Processed message ${message.id} in chat ${message.chatId}`);
+        log.debug(`Processed message ${message.id} in chat ${message.chatId}`);
       } catch (error) {
-        console.error("Error handling message:", error);
+        log.error({ err: error }, "Error handling message");
       }
     });
   }
@@ -465,7 +467,7 @@ export class MessageHandler {
         timestamp: Math.floor(message.timestamp.getTime() / 1000),
       });
     } catch (error) {
-      console.error("Error storing message to feed:", error);
+      log.error({ err: error }, "Error storing message to feed");
     }
   }
 

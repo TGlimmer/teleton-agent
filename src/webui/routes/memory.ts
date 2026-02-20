@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { WebUIServerDeps, MemorySearchResult, SessionInfo, APIResponse } from "../types.js";
+import { getErrorMessage } from "../../utils/errors.js";
 
 export function createMemoryRoutes(deps: WebUIServerDeps) {
   const app = new Hono();
@@ -62,7 +63,7 @@ export function createMemoryRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -109,7 +110,7 @@ export function createMemoryRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -150,7 +151,7 @@ export function createMemoryRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }

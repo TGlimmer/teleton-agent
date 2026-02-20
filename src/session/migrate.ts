@@ -3,6 +3,9 @@ import { join } from "path";
 import { getDatabase } from "../memory/index.js";
 import type { SessionEntry } from "./store.js";
 import { TELETON_ROOT } from "../workspace/paths.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Session");
 
 const SESSIONS_JSON = join(TELETON_ROOT, "sessions.json");
 const SESSIONS_JSON_BACKUP = join(TELETON_ROOT, "sessions.json.backup");
@@ -17,7 +20,7 @@ export function migrateSessionsToDb(): number {
   }
 
   try {
-    console.log("🔄 Migrating sessions from JSON to SQLite...");
+    log.info("Migrating sessions from JSON to SQLite...");
 
     const raw = readFileSync(SESSIONS_JSON, "utf-8");
     const store = JSON.parse(raw) as Record<string, SessionEntry>;
@@ -53,12 +56,12 @@ export function migrateSessionsToDb(): number {
 
     renameSync(SESSIONS_JSON, SESSIONS_JSON_BACKUP);
 
-    console.log(`✅ Migrated ${migrated} sessions to SQLite`);
-    console.log(`   Backup saved: ${SESSIONS_JSON_BACKUP}`);
+    log.info(`Migrated ${migrated} sessions to SQLite`);
+    log.info(`Backup saved: ${SESSIONS_JSON_BACKUP}`);
 
     return migrated;
   } catch (error) {
-    console.error("❌ Failed to migrate sessions:", error);
+    log.error({ err: error }, "Failed to migrate sessions");
     return 0;
   }
 }

@@ -6,7 +6,12 @@ import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import { readFileSync } from "fs";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { toLong } from "../../../../utils/gramjs-bigint.js";
 import { validateReadPath, WorkspaceSecurityError } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface SetChatPhotoParams {
   chat_id: string;
@@ -59,7 +64,7 @@ export const telegramSetChatPhotoExecutor: ToolExecutor<SetChatPhotoParams> = as
       } else {
         await client.invoke(
           new Api.messages.EditChatPhoto({
-            chatId: BigInt(chat_id) as any,
+            chatId: toLong(BigInt(chat_id)),
             photo: new Api.InputChatPhotoEmpty(),
           })
         );
@@ -123,7 +128,7 @@ export const telegramSetChatPhotoExecutor: ToolExecutor<SetChatPhotoParams> = as
     } else {
       await client.invoke(
         new Api.messages.EditChatPhoto({
-          chatId: BigInt(chat_id) as any,
+          chatId: toLong(BigInt(chat_id)),
           photo: new Api.InputChatUploadedPhoto({
             file,
           }),
@@ -141,10 +146,10 @@ export const telegramSetChatPhotoExecutor: ToolExecutor<SetChatPhotoParams> = as
       },
     };
   } catch (error) {
-    console.error("Error in telegram_set_chat_photo:", error);
+    log.error({ err: error }, "Error in telegram_set_chat_photo");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

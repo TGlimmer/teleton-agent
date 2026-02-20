@@ -10,6 +10,9 @@ import { WORKSPACE_PATHS } from "../../workspace/paths.js";
 import { adaptPlugin, ensurePluginDeps } from "../../agent/tools/plugin-loader.js";
 import type { ToolRegistry } from "../../agent/tools/registry.js";
 import type { MarketplaceDeps, RegistryEntry, MarketplacePlugin } from "../types.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("WebUI");
 
 const REGISTRY_URL =
   "https://raw.githubusercontent.com/TONresistor/teleton-plugins/main/registry.json";
@@ -63,7 +66,7 @@ export class MarketplaceService {
     } catch (err) {
       // Stale-on-error: return stale cache if available
       if (this.cache) {
-        console.warn("[marketplace] Registry fetch failed, using stale cache:", err);
+        log.warn({ err }, "Registry fetch failed, using stale cache");
         return this.cache.entries;
       }
       throw err;
@@ -270,7 +273,7 @@ export class MarketplaceService {
         try {
           rmSync(pluginDir, { recursive: true, force: true });
         } catch (cleanupErr) {
-          console.error(`[marketplace] Failed to cleanup ${pluginDir}:`, cleanupErr);
+          log.error({ err: cleanupErr }, `Failed to cleanup ${pluginDir}`);
         }
       }
       throw err;

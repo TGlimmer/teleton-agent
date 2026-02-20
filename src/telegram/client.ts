@@ -3,11 +3,14 @@ import { Logger, LogLevel } from "telegram/extensions/Logger.js";
 import { StringSession } from "telegram/sessions/index.js";
 import { NewMessage } from "telegram/events/index.js";
 import type { NewMessageEvent } from "telegram/events/NewMessage.js";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { createInterface } from "readline";
 import { markdownToTelegramHtml } from "./formatting.js";
 import { withFloodRetry } from "./flood-retry.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 function promptInput(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -67,7 +70,7 @@ export class TelegramUserClient {
         return readFileSync(this.config.sessionPath, "utf-8").trim();
       }
     } catch (error) {
-      console.warn("Failed to load session:", error);
+      log.warn({ err: error }, "Failed to load session");
     }
     return "";
   }
@@ -76,24 +79,23 @@ export class TelegramUserClient {
     try {
       const sessionString = this.client.session.save() as string | undefined;
       if (typeof sessionString !== "string" || !sessionString) {
-        console.warn("No session string to save");
+        log.warn("No session string to save");
         return;
       }
       const dir = dirname(this.config.sessionPath);
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
       }
-      writeFileSync(this.config.sessionPath, sessionString, { encoding: "utf-8" });
-      chmodSync(this.config.sessionPath, 0o600);
-      console.log("✅ Session saved");
+      writeFileSync(this.config.sessionPath, sessionString, { encoding: "utf-8", mode: 0o600 });
+      log.info("Session saved");
     } catch (error) {
-      console.error("Failed to save session:", error);
+      log.error({ err: error }, "Failed to save session");
     }
   }
 
   async connect(): Promise<void> {
     if (this.connected) {
-      console.log("Already connected");
+      log.info("Already connected");
       return;
     }
 
@@ -103,14 +105,14 @@ export class TelegramUserClient {
       if (hasSession) {
         await this.client.connect();
       } else {
-        console.log("Starting authentication flow...");
+        log.info("Starting authentication flow...");
         await this.client.start({
           phoneNumber: async () => this.config.phone || (await promptInput("Phone number: ")),
           phoneCode: async () => await promptInput("Verification code: "),
           password: async () => await promptInput("2FA password (if enabled): "),
-          onError: (err) => console.error("Auth error:", err),
+          onError: (err) => log.error({ err }, "Auth error"),
         });
-        console.log("✅ Authenticated");
+        log.info("Authenticated");
 
         this.saveSession();
       }
@@ -127,7 +129,7 @@ export class TelegramUserClient {
 
       this.connected = true;
     } catch (error) {
-      console.error("Connection error:", error);
+      log.error({ err: error }, "Connection error");
       throw error;
     }
   }
@@ -138,9 +140,9 @@ export class TelegramUserClient {
     try {
       await this.client.disconnect();
       this.connected = false;
-      console.log("Disconnected");
+      log.info("Disconnected");
     } catch (error) {
-      console.error("Disconnect error:", error);
+      log.error({ err: error }, "Disconnect error");
     }
   }
 
@@ -170,8 +172,8 @@ export class TelegramUserClient {
       if (process.env.DEBUG) {
         const chatId = event.message.chatId?.toString() ?? "unknown";
         const isGroup = chatId.startsWith("-");
-        console.log(
-          `🔔 RAW EVENT: chatId=${chatId} isGroup=${isGroup} text="${event.message.message?.substring(0, 30) ?? ""}"`
+        log.debug(
+          `RAW EVENT: chatId=${chatId} isGroup=${isGroup} text="${event.message.message?.substring(0, 30) ?? ""}"`
         );
       }
       await handler(event);
@@ -209,7 +211,7 @@ export class TelegramUserClient {
       );
       return true;
     } catch (error) {
-      console.error("Error answering callback query:", error);
+      log.error({ err: error }, "Error answering callback query");
       return false;
     }
   }
@@ -294,7 +296,7 @@ export class TelegramUserClient {
       );
       return result.users[0] || result.chats[0];
     } catch (error: any) {
-      console.error(`Failed to resolve username ${clean}:`, error);
+      log.error({ err: error }, `Failed to resolve username ${clean}`);
       return undefined;
     }
   }

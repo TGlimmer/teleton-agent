@@ -44,6 +44,9 @@ import type {
   PluginMessageEvent,
   PluginCallbackEvent,
 } from "@teleton-agent/sdk";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("PluginLoader");
 
 const PLUGIN_DATA_DIR = join(TELETON_ROOT, "plugins", "data");
 
@@ -85,9 +88,8 @@ export function adaptPlugin(
     try {
       manifest = validateManifest(raw.manifest);
     } catch (err) {
-      console.warn(
-        `⚠️  [${entryName}] invalid manifest, ignoring:`,
-        err instanceof Error ? err.message : err
+      log.warn(
+        `[${entryName}] invalid manifest, ignoring: ${err instanceof Error ? err.message : err}`
       );
     }
   }
@@ -140,14 +142,15 @@ export function adaptPlugin(
   const rawPluginConfig = (config.plugins?.[pluginConfigKey] as Record<string, unknown>) ?? {};
   const pluginConfig = { ...manifest?.defaultConfig, ...rawPluginConfig };
 
-  const log = (...args: unknown[]) => console.log(`[${pluginName}]`, ...args);
+  const pluginLog = createLogger(`Plugin:${pluginName}`);
+  const logFn = (...args: unknown[]) => pluginLog.info(args.map(String).join(" "));
 
   // Validate declared secrets and warn if missing
   if (manifest?.secrets) {
     const dummyLogger = {
-      info: log,
-      warn: (...a: unknown[]) => console.warn(`⚠️ [${pluginName}]`, ...a),
-      error: (...a: unknown[]) => console.error(`❌ [${pluginName}]`, ...a),
+      info: (...a: unknown[]) => pluginLog.info(a.map(String).join(" ")),
+      warn: (...a: unknown[]) => pluginLog.warn(a.map(String).join(" ")),
+      error: (...a: unknown[]) => pluginLog.error(a.map(String).join(" ")),
       debug: () => {},
     };
     const secretsCheck = createSecretsSDK(pluginName, pluginConfig, dummyLogger);
@@ -160,8 +163,8 @@ export function adaptPlugin(
       }
     }
     if (missing.length > 0) {
-      console.warn(
-        `⚠️  [${pluginName}] Missing required secrets:\n` +
+      pluginLog.warn(
+        `Missing required secrets:\n` +
           missing.map((m) => `   • ${m}`).join("\n") +
           `\n   Set via: /plugin set ${pluginName} <key> <value>`
       );
@@ -209,10 +212,7 @@ export function adaptPlugin(
           }
         }
       } catch (err) {
-        console.error(
-          `❌ [${pluginName}] migrate() failed:`,
-          err instanceof Error ? err.message : err
-        );
+        pluginLog.error(`migrate() failed: ${err instanceof Error ? err.message : err}`);
         if (pluginDb) {
           try {
             pluginDb.close();
@@ -268,10 +268,7 @@ export function adaptPlugin(
           };
         });
       } catch (err) {
-        console.error(
-          `❌ [${pluginName}] tools() failed:`,
-          err instanceof Error ? err.message : err
-        );
+        pluginLog.error(`tools() failed: ${err instanceof Error ? err.message : err}`);
         return [];
       }
     },
@@ -285,14 +282,11 @@ export function adaptPlugin(
           db: pluginDb ?? null,
           config: sanitizedConfig,
           pluginConfig,
-          log,
+          log: logFn,
         };
         await raw.start(enhancedContext);
       } catch (err) {
-        console.error(
-          `❌ [${pluginName}] start() failed:`,
-          err instanceof Error ? err.message : err
-        );
+        pluginLog.error(`start() failed: ${err instanceof Error ? err.message : err}`);
       }
     },
 
@@ -300,10 +294,7 @@ export function adaptPlugin(
       try {
         await raw.stop?.();
       } catch (err) {
-        console.error(
-          `❌ [${pluginName}] stop() failed:`,
-          err instanceof Error ? err.message : err
-        );
+        pluginLog.error(`stop() failed: ${err instanceof Error ? err.message : err}`);
       } finally {
         if (pluginDb) {
           try {
@@ -335,8 +326,8 @@ export async function ensurePluginDeps(pluginDir: string, pluginEntry: string): 
   if (!existsSync(pkgJson)) return;
 
   if (!existsSync(lockfile)) {
-    console.warn(
-      `⚠️  [${pluginEntry}] package.json without package-lock.json — skipping (lockfile required)`
+    log.warn(
+      `[${pluginEntry}] package.json without package-lock.json — skipping (lockfile required)`
     );
     return;
   }
@@ -347,16 +338,16 @@ export async function ensurePluginDeps(pluginDir: string, pluginEntry: string): 
     if (existsSync(marker) && statSync(marker).mtimeMs >= statSync(lockfile).mtimeMs) return;
   }
 
-  console.log(`📦 [${pluginEntry}] Installing dependencies...`);
+  log.info(`[${pluginEntry}] Installing dependencies...`);
   try {
     await execFileAsync("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], {
       cwd: pluginDir,
       timeout: 60_000,
       env: { ...process.env, NODE_ENV: "production" },
     });
-    console.log(`📦 [${pluginEntry}] Dependencies installed`);
+    log.info(`[${pluginEntry}] Dependencies installed`);
   } catch (err) {
-    console.error(`❌ [${pluginEntry}] Failed to install deps: ${String(err).slice(0, 300)}`);
+    log.error(`[${pluginEntry}] Failed to install deps: ${String(err).slice(0, 300)}`);
   }
 }
 
@@ -424,9 +415,8 @@ export async function loadEnhancedPlugins(
   // Phase 3: Validate and adapt plugins (sequential for consistency)
   for (const result of loadResults) {
     if (result.status === "rejected") {
-      console.error(
-        `❌ Plugin failed to load:`,
-        result.reason instanceof Error ? result.reason.message : result.reason
+      log.error(
+        `Plugin failed to load: ${result.reason instanceof Error ? result.reason.message : result.reason}`
       );
       continue;
     }
@@ -435,26 +425,21 @@ export async function loadEnhancedPlugins(
 
     try {
       if (!mod.tools || (typeof mod.tools !== "function" && !Array.isArray(mod.tools))) {
-        console.warn(`⚠️  Plugin "${entry}": no 'tools' array or function exported, skipping`);
+        log.warn(`Plugin "${entry}": no 'tools' array or function exported, skipping`);
         continue;
       }
 
       const adapted = adaptPlugin(mod, entry, config, loadedModuleNames, sdkDeps);
 
       if (loadedNames.has(adapted.name)) {
-        console.warn(
-          `⚠️  Plugin "${adapted.name}" already loaded, skipping duplicate from "${entry}"`
-        );
+        log.warn(`Plugin "${adapted.name}" already loaded, skipping duplicate from "${entry}"`);
         continue;
       }
 
       loadedNames.add(adapted.name);
       modules.push(adapted);
     } catch (err) {
-      console.error(
-        `❌ Plugin "${entry}" failed to adapt:`,
-        err instanceof Error ? err.message : err
-      );
+      log.error(`Plugin "${entry}" failed to adapt: ${err instanceof Error ? err.message : err}`);
     }
   }
 

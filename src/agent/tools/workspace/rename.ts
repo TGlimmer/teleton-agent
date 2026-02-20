@@ -6,6 +6,7 @@ import { dirname } from "path";
 import { mkdirSync } from "fs";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { validatePath, WorkspaceSecurityError } from "../../../workspace/index.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 interface WorkspaceRenameParams {
   from: string;
@@ -98,7 +99,7 @@ export const workspaceRenameExecutor: ToolExecutor<WorkspaceRenameParams> = asyn
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

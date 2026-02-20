@@ -2,6 +2,9 @@ import { WalletContractV5R1, TonClient, toNano, internal } from "@ton/ton";
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "./endpoint.js";
 import { getKeyPair } from "./wallet-service.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("TON");
 
 export interface SendTonParams {
   toAddress: string;
@@ -18,13 +21,13 @@ export async function sendTon(params: SendTonParams): Promise<string | null> {
     try {
       recipientAddress = Address.parse(toAddress);
     } catch (e) {
-      console.error(`Invalid recipient address: ${toAddress}`, e);
+      log.error({ err: e }, `Invalid recipient address: ${toAddress}`);
       return null;
     }
 
     const keyPair = await getKeyPair();
     if (!keyPair) {
-      console.error("Wallet not initialized");
+      log.error("Wallet not initialized");
       return null;
     }
 
@@ -55,11 +58,11 @@ export async function sendTon(params: SendTonParams): Promise<string | null> {
 
     const pseudoHash = `${seqno}_${Date.now()}_${amount.toFixed(2)}`;
 
-    console.log(`💸 [TON] Sent ${amount} TON to ${toAddress.slice(0, 8)}... - seqno: ${seqno}`);
+    log.info(`Sent ${amount} TON to ${toAddress.slice(0, 8)}... - seqno: ${seqno}`);
 
     return pseudoHash;
   } catch (error) {
-    console.error("Error sending TON:", error);
+    log.error({ err: error }, "Error sending TON");
     return null;
   }
 }

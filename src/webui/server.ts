@@ -7,6 +7,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { WebUIServerDeps } from "./types.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("WebUI");
 import {
   generateToken,
   maskToken,
@@ -95,7 +98,7 @@ export class WebUIServer {
         const start = Date.now();
         await next();
         const duration = Date.now() - start;
-        console.log(`📡 ${c.req.method} ${c.req.path} → ${c.res.status} (${duration}ms)`);
+        log.info(`${c.req.method} ${c.req.path} → ${c.res.status} (${duration}ms)`);
       });
     }
 
@@ -253,7 +256,7 @@ export class WebUIServer {
 
     // Error handler
     this.app.onError((err, c) => {
-      console.error("WebUI error:", err);
+      log.error({ err }, "WebUI error");
       return c.json(
         {
           success: false,
@@ -280,11 +283,9 @@ export class WebUIServer {
           (info) => {
             const url = `http://${info.address}:${info.port}`;
 
-            console.log(`\n🌐 WebUI server running`);
-            console.log(`   URL: ${url}/auth/exchange?token=${this.authToken}`);
-            console.log(
-              `   Token: ${maskToken(this.authToken)} (use Bearer header for API access)\n`
-            );
+            log.info(`WebUI server running`);
+            log.info(`URL: ${url}/auth/exchange?token=${this.authToken}`);
+            log.info(`Token: ${maskToken(this.authToken)} (use Bearer header for API access)`);
             resolve();
           }
         );
@@ -300,7 +301,7 @@ export class WebUIServer {
       return new Promise((resolve) => {
         this.server!.close(() => {
           logInterceptor.uninstall();
-          console.log("🌐 WebUI server stopped");
+          log.info("WebUI server stopped");
           resolve();
         });
       });

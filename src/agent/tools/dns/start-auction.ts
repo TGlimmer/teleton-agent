@@ -4,6 +4,10 @@ import { loadWallet, getKeyPair } from "../../../ton/wallet-service.js";
 import { WalletContractV5R1, TonClient, toNano, internal, beginCell } from "@ton/ton";
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 const DNS_COLLECTION = "EQC3dNlesgVD8YbAazcauIrXBPfiVhMMr5YYk2in0Mtsz0Bz";
 interface DnsStartAuctionParams {
@@ -105,10 +109,10 @@ export const dnsStartAuctionExecutor: ToolExecutor<DnsStartAuctionParams> = asyn
       },
     };
   } catch (error) {
-    console.error("Error in dns_start_auction:", error);
+    log.error({ err: error }, "Error in dns_start_auction");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

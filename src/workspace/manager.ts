@@ -4,6 +4,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { TELETON_ROOT, WORKSPACE_ROOT, WORKSPACE_PATHS } from "./paths.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Workspace");
 
 // Resolve package root by walking up from current file until we find package.json
 function findPackageRoot(): string {
@@ -50,13 +53,13 @@ export async function ensureWorkspace(config?: WorkspaceConfig): Promise<Workspa
   // Create base teleton directory
   if (!existsSync(TELETON_ROOT)) {
     mkdirSync(TELETON_ROOT, { recursive: true });
-    console.log(`✓ Created Teleton root at ${TELETON_ROOT}`);
+    log.info(`Created Teleton root at ${TELETON_ROOT}`);
   }
 
   // Create workspace directory
   if (!existsSync(WORKSPACE_ROOT)) {
     mkdirSync(WORKSPACE_ROOT, { recursive: true });
-    console.log(`✓ Created workspace at ${WORKSPACE_ROOT}`);
+    log.info(`Created workspace at ${WORKSPACE_ROOT}`);
   }
 
   // Create workspace subdirectories
@@ -123,7 +126,7 @@ async function bootstrapTemplates(workspace: Workspace): Promise<void> {
       const templateSource = join(TEMPLATES_DIR, template.name);
       if (existsSync(templateSource)) {
         copyFileSync(templateSource, template.path);
-        console.log(`  ✓ Created ${template.name}`);
+        log.info(`Created ${template.name}`);
       }
     }
   }

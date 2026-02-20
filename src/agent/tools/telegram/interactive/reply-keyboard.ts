@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_reply_keyboard tool
@@ -117,10 +121,10 @@ export const telegramReplyKeyboardExecutor: ToolExecutor<ReplyKeyboardParams> = 
       },
     };
   } catch (error) {
-    console.error("Error sending message with reply keyboard:", error);
+    log.error({ err: error }, "Error sending message with reply keyboard");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

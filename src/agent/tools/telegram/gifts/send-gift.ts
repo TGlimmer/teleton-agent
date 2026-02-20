@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { hasVerifiedDeal } from "../../../../deals/module.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for sending a gift
@@ -92,9 +96,9 @@ export const telegramSendGiftExecutor: ToolExecutor<SendGiftParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error sending gift:", error);
+    log.error({ err: error }, "Error sending gift");
 
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     if (errorMsg.includes("BALANCE_TOO_LOW")) {
       return {
         success: false,

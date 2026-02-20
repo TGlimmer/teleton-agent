@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DnsResolveParams {
   domain: string;
 }
@@ -69,10 +73,10 @@ export const dnsResolveExecutor: ToolExecutor<DnsResolveParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dns_resolve:", error);
+    log.error({ err: error }, "Error in dns_resolve");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

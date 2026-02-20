@@ -12,6 +12,10 @@ import { sanitizeForContext } from "../../utils/sanitize.js";
 import type { Tool, ToolExecutor, ToolResult, ToolScope } from "./types.js";
 import type { ToolRegistry } from "./registry.js";
 import type { McpConfig, McpServerConfig } from "../../config/schema.js";
+import { getErrorMessage } from "../../utils/errors.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("MCP");
 
 export interface McpConnection {
   serverName: string;
@@ -104,9 +108,8 @@ export async function loadMcpServers(config: McpConfig): Promise<McpConnection[]
     if (result.status === "fulfilled") {
       connections.push(result.value);
     } else {
-      console.warn(
-        `⚠️ MCP server "${name}" failed to connect:`,
-        result.reason instanceof Error ? result.reason.message : result.reason
+      log.warn(
+        `MCP server "${name}" failed to connect: ${result.reason instanceof Error ? result.reason.message : result.reason}`
       );
     }
   }
@@ -158,7 +161,7 @@ export async function registerMcpTools(
           } catch (error) {
             return {
               success: false,
-              error: `MCP tool "${mcpTool.name}" failed: ${error instanceof Error ? error.message : String(error)}`,
+              error: `MCP tool "${mcpTool.name}" failed: ${getErrorMessage(error)}`,
             };
           }
         };
@@ -183,9 +186,8 @@ export async function registerMcpTools(
         serverNames.push(conn.serverName);
       }
     } catch (error) {
-      console.warn(
-        `⚠️ MCP server "${conn.serverName}" tool discovery failed:`,
-        error instanceof Error ? error.message : error
+      log.warn(
+        `MCP server "${conn.serverName}" tool discovery failed: ${error instanceof Error ? error.message : error}`
       );
     }
   }
@@ -202,9 +204,8 @@ export async function closeMcpServers(connections: McpConnection[]): Promise<voi
       try {
         await conn.client.close();
       } catch (error) {
-        console.warn(
-          `⚠️ MCP server "${conn.serverName}" close failed:`,
-          error instanceof Error ? error.message : error
+        log.warn(
+          `MCP server "${conn.serverName}" close failed: ${error instanceof Error ? error.message : error}`
         );
       }
     })

@@ -1,6 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { toLong } from "../../../../utils/gramjs-bigint.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_get_my_stickers tool
@@ -43,7 +48,7 @@ export const telegramGetMyStickersExecutor: ToolExecutor<GetMyStickersParams> = 
     // Get all installed sticker sets
     const result: any = await gramJsClient.invoke(
       new Api.messages.GetAllStickers({
-        hash: BigInt(0) as any,
+        hash: toLong(0),
       })
     );
 
@@ -84,10 +89,10 @@ export const telegramGetMyStickersExecutor: ToolExecutor<GetMyStickersParams> = 
       },
     };
   } catch (error) {
-    console.error("Error getting installed stickers:", error);
+    log.error({ err: error }, "Error getting installed stickers");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { DEDUST_API_URL } from "./constants.js";
 import { fetchWithTimeout } from "../../../utils/fetch.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DedustPricesParams {
   symbols?: string[];
 }
@@ -77,10 +81,10 @@ export const dedustPricesExecutor: ToolExecutor<DedustPricesParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dedust_prices:", error);
+    log.error({ err: error }, "Error in dedust_prices");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

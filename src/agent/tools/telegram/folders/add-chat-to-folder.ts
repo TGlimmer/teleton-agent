@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_add_chat_to_folder tool
@@ -43,13 +47,13 @@ export const telegramAddChatToFolderExecutor: ToolExecutor<AddChatToFolderParams
 
     // Get existing filters
     // GetDialogFilters returns messages.DialogFilters { filters: [] } (not a plain array)
-    const filtersResult = await gramJsClient.invoke(new Api.messages.GetDialogFilters());
-    const filterList: any[] = Array.isArray(filtersResult)
-      ? filtersResult
-      : ((filtersResult as any).filters ?? []);
+    const filtersResult = (await gramJsClient.invoke(
+      new Api.messages.GetDialogFilters()
+    )) as Api.messages.DialogFilters;
+    const filterList = filtersResult.filters ?? [];
 
     // Find the target folder
-    const folder = filterList.find((f: any) => f.id === folderId);
+    const folder = filterList.find((f) => "id" in f && f.id === folderId);
 
     if (!folder || folder.className !== "DialogFilter") {
       return {
@@ -62,8 +66,9 @@ export const telegramAddChatToFolderExecutor: ToolExecutor<AddChatToFolderParams
     const chatEntity = await gramJsClient.getEntity(chatId);
 
     // Add chat to folder's includePeers
+    const inputPeer = await gramJsClient.getInputEntity(chatId);
     const updatedIncludePeers = [...(folder.includePeers || [])];
-    updatedIncludePeers.push(chatEntity);
+    updatedIncludePeers.push(inputPeer);
 
     // Update folder
     const updatedFilter = new Api.DialogFilter({
@@ -88,10 +93,10 @@ export const telegramAddChatToFolderExecutor: ToolExecutor<AddChatToFolderParams
       },
     };
   } catch (error) {
-    console.error("Error adding chat to folder:", error);
+    log.error({ err: error }, "Error adding chat to folder");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

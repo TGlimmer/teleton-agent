@@ -3,6 +3,9 @@ import type { EmbeddingProvider } from "../embeddings/provider.js";
 import { hashText, serializeEmbedding } from "../embeddings/index.js";
 import { randomUUID } from "crypto";
 import type { SessionRow } from "../types/db-rows.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Memory");
 
 export interface Session {
   id: string;
@@ -178,9 +181,9 @@ export class SessionStore {
           .run(knowledgeId, embeddingBuffer);
       }
 
-      console.log(`Indexed session ${sessionId} to knowledge base`);
+      log.info(`Indexed session ${sessionId} to knowledge base`);
     } catch (error) {
-      console.error("Error indexing session:", error);
+      log.error({ err: error }, "Error indexing session");
     }
   }
 

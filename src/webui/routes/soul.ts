@@ -3,6 +3,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { WebUIServerDeps, APIResponse } from "../types.js";
 import { WORKSPACE_ROOT } from "../../workspace/paths.js";
+import { clearPromptCache } from "../../soul/loader.js";
+import { getErrorMessage } from "../../utils/errors.js";
 
 const SOUL_FILES = ["SOUL.md", "SECURITY.md", "STRATEGY.md", "MEMORY.md"] as const;
 type SoulFile = (typeof SOUL_FILES)[number];
@@ -50,7 +52,7 @@ export function createSoulRoutes(_deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -89,8 +91,7 @@ export function createSoulRoutes(_deps: WebUIServerDeps) {
 
       const filePath = join(WORKSPACE_ROOT, filename);
       writeFileSync(filePath, body.content, "utf-8");
-
-      // TODO: Invalidate prompt cache if we add caching to soul loader
+      clearPromptCache();
 
       const response: APIResponse<{ message: string }> = {
         success: true,
@@ -100,7 +101,7 @@ export function createSoulRoutes(_deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }

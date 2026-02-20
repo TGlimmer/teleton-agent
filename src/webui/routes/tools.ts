@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { WebUIServerDeps, ToolInfo, ModuleInfo, APIResponse } from "../types.js";
+import { getErrorMessage } from "../../utils/errors.js";
 
 export function createToolsRoutes(deps: WebUIServerDeps) {
   const app = new Hono();
@@ -50,7 +51,7 @@ export function createToolsRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -133,7 +134,7 @@ export function createToolsRoutes(deps: WebUIServerDeps) {
 
       // Validate scope against whitelist
       const VALID_SCOPES = ["always", "dm-only", "group-only", "admin-only"] as const;
-      if (scope !== undefined && !VALID_SCOPES.includes(scope as any)) {
+      if (scope !== undefined && !(VALID_SCOPES as readonly string[]).includes(scope)) {
         const response: APIResponse = {
           success: false,
           error: `Invalid scope "${scope}". Must be one of: ${VALID_SCOPES.join(", ")}`,
@@ -182,7 +183,7 @@ export function createToolsRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -215,7 +216,7 @@ export function createToolsRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -256,7 +257,7 @@ export function createToolsRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }

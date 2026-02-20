@@ -19,6 +19,9 @@ import type { PluginModule, PluginContext, Tool, ToolExecutor, ToolScope } from 
 import type { ToolRegistry } from "./registry.js";
 import type { Config } from "../../config/schema.js";
 import type { SDKDependencies } from "../../sdk/index.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("PluginWatcher");
 
 const RELOAD_DEBOUNCE_MS = 300;
 
@@ -76,10 +79,10 @@ export class PluginWatcher {
     });
 
     this.watcher.on("error", (err: unknown) => {
-      console.error("[hot-reload] Watcher error:", err instanceof Error ? err.message : err);
+      log.error(`Watcher error: ${err instanceof Error ? err.message : err}`);
     });
 
-    console.log("[hot-reload] Plugin watcher started");
+    log.info("Plugin watcher started");
   }
 
   /**
@@ -135,9 +138,8 @@ export class PluginWatcher {
       setTimeout(() => {
         this.reloadTimers.delete(pluginName);
         this.reloadPlugin(pluginName).catch((err) => {
-          console.error(
-            `[hot-reload] Unexpected error reloading "${pluginName}":`,
-            err instanceof Error ? err.message : err
+          log.error(
+            `Unexpected error reloading "${pluginName}": ${err instanceof Error ? err.message : err}`
           );
         });
       }, RELOAD_DEBOUNCE_MS)
@@ -161,7 +163,7 @@ export class PluginWatcher {
 
   private async reloadPlugin(pluginName: string): Promise<boolean> {
     if (this.reloading) {
-      console.warn(`[hot-reload] Reload already in progress, skipping "${pluginName}"`);
+      log.warn(`Reload already in progress, skipping "${pluginName}"`);
       return false;
     }
 
@@ -173,9 +175,7 @@ export class PluginWatcher {
     const oldIndex = modules.findIndex((m) => m.name === pluginName);
     const oldModule = oldIndex >= 0 ? modules[oldIndex] : null;
 
-    console.log(
-      `[hot-reload] Reloading plugin "${pluginName}"${oldModule ? ` (v${oldModule.version})` : ""}...`
-    );
+    log.info(`Reloading plugin "${pluginName}"${oldModule ? ` (v${oldModule.version})` : ""}...`);
 
     // Snapshot old tools for rollback before any changes
     let oldTools: Array<{ tool: Tool; executor: ToolExecutor; scope?: ToolScope }> | null = null;
@@ -227,9 +227,8 @@ export class PluginWatcher {
         try {
           await oldModule.stop?.();
         } catch (stopErr) {
-          console.warn(
-            `[hot-reload] Old plugin "${pluginName}" stop() failed:`,
-            stopErr instanceof Error ? stopErr.message : stopErr
+          log.warn(
+            `Old plugin "${pluginName}" stop() failed: ${stopErr instanceof Error ? stopErr.message : stopErr}`
           );
         }
         oldStopped = true;
@@ -251,15 +250,10 @@ export class PluginWatcher {
         modules.push(adapted);
       }
 
-      console.log(
-        `[hot-reload] Plugin "${pluginName}" v${adapted.version} reloaded (${newTools.length} tools)`
-      );
+      log.info(`Plugin "${pluginName}" v${adapted.version} reloaded (${newTools.length} tools)`);
       return true;
     } catch (err) {
-      console.error(
-        `[hot-reload] Failed to reload "${pluginName}":`,
-        err instanceof Error ? err.message : err
-      );
+      log.error(`Failed to reload "${pluginName}": ${err instanceof Error ? err.message : err}`);
 
       // Rollback: only if we actually stopped the old plugin (steps 1-4 errors
       // don't need rollback — old module is still running)
@@ -272,9 +266,9 @@ export class PluginWatcher {
           // Reopen plugin DB (stop() closed it)
           oldModule.migrate?.(pluginContext.db);
           await oldModule.start?.(pluginContext);
-          console.warn(`[hot-reload] Rolled back to previous version of "${pluginName}"`);
+          log.warn(`Rolled back to previous version of "${pluginName}"`);
         } catch {
-          console.error(`[hot-reload] Rollback also failed for "${pluginName}" — plugin disabled`);
+          log.error(`Rollback also failed for "${pluginName}" — plugin disabled`);
           registry.removePluginTools(pluginName);
           modules.splice(oldIndex, 1);
         }

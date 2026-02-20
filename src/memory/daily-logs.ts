@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { WORKSPACE_PATHS } from "../workspace/index.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Memory");
 
 const MEMORY_DIR = WORKSPACE_PATHS.MEMORY_DIR;
 
@@ -36,9 +39,9 @@ export function appendToDailyLog(content: string, date: Date = new Date()): void
     const entry = `## ${timestamp}\n\n${content}\n\n---\n\n`;
     appendFileSync(logPath, entry, "utf-8");
 
-    console.log(`📅 Daily log updated: ${logPath}`);
+    log.info(`Daily log updated: ${logPath}`);
   } catch (error) {
-    console.error("Failed to write daily log:", error instanceof Error ? error.message : error);
+    log.error({ err: error }, "Failed to write daily log");
   }
 }
 

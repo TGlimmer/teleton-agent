@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Tool definition for getting Stars balance
@@ -41,10 +45,10 @@ export const telegramGetStarsBalanceExecutor: ToolExecutor<{}> = async (
       },
     };
   } catch (error) {
-    console.error("Error getting Stars balance:", error);
+    log.error({ err: error }, "Error getting Stars balance");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

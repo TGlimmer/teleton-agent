@@ -7,6 +7,7 @@ import {
   SECONDS_PER_DAY,
   SECONDS_PER_HOUR,
 } from "../constants/limits.js";
+import { getErrorMessage } from "../utils/errors.js";
 
 /**
  * Safely stringify and truncate JSON for prompt injection.
@@ -94,7 +95,7 @@ export async function executeScheduledTask(
         {
           toolExecuted: payload.tool,
           toolParams: payload.params,
-          toolError: error instanceof Error ? error.message : String(error),
+          toolError: getErrorMessage(error),
         },
         parentResults
       );

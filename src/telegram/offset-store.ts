@@ -2,6 +2,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "
 import { dirname } from "path";
 import { join } from "path";
 import { TELETON_ROOT } from "../workspace/paths.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 const OFFSET_FILE = join(TELETON_ROOT, "telegram-offset.json");
 
@@ -41,7 +44,7 @@ function loadState(): OffsetState {
     offsetCache = state as OffsetState;
     return offsetCache;
   } catch (error) {
-    console.warn("Failed to read offset store:", error);
+    log.warn({ err: error }, "Failed to read offset store");
     offsetCache = { version: STORE_VERSION, perChat: {} };
     return offsetCache;
   }
@@ -63,7 +66,7 @@ function saveState(state: OffsetState): void {
     renameSync(tmpFile, OFFSET_FILE);
     offsetCache = state;
   } catch (error) {
-    console.error("Failed to write offset store:", error);
+    log.error({ err: error }, "Failed to write offset store");
   }
 }
 

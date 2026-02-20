@@ -1,4 +1,4 @@
-import type { Context, Message } from "@mariozechner/pi-ai";
+import type { Context, Message, TextContent } from "@mariozechner/pi-ai";
 import { appendToTranscript, readTranscript } from "../session/transcript.js";
 import { randomUUID } from "crypto";
 import { writeSummaryToDailyLog } from "./daily-logs.js";
@@ -6,6 +6,7 @@ import { summarizeWithFallback } from "./ai-summarization.js";
 import { saveSessionMemory } from "../session/memory-hook.js";
 import { encodingForModel } from "js-tiktoken";
 import type { SupportedProvider } from "../config/providers.js";
+import { createLogger } from "../utils/logger.js";
 import {
   COMPACTION_MAX_MESSAGES,
   COMPACTION_KEEP_RECENT,
@@ -34,6 +35,9 @@ export const DEFAULT_COMPACTION_CONFIG: CompactionConfig = {
   memoryFlushEnabled: true,
   softThresholdTokens: DEFAULT_SOFT_THRESHOLD_TOKENS,
 };
+
+const log = createLogger("Memory");
+
 let tokenizer: ReturnType<typeof encodingForModel> | null = null;
 
 function getTokenizer() {
@@ -48,7 +52,7 @@ function estimateTokens(content: string): number {
     const enc = getTokenizer();
     return enc.encode(content).length;
   } catch (error) {
-    console.warn("Token encoding failed, using fallback:", error);
+    log.warn({ err: error }, "Token encoding failed, using fallback");
     return Math.ceil(content.length / 4);
   }
 }
@@ -62,11 +66,16 @@ function calculateContextTokens(context: Context): number {
 
   for (const message of context.messages) {
     if (message.role === "user") {
-      total += estimateTokens(message.content as string);
+      if (typeof message.content === "string") {
+        total += estimateTokens(message.content);
+      } else if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          if (block.type === "text") total += estimateTokens(block.text);
+        }
+      }
     } else if (message.role === "assistant") {
-      const content = message.content as Array<{ type: string; text?: string }>;
-      for (const block of content) {
-        if (block.type === "text" && block.text) {
+      for (const block of message.content) {
+        if (block.type === "text") {
           total += estimateTokens(block.text);
         }
       }
@@ -89,7 +98,7 @@ export function shouldFlushMemory(
   const softThreshold = config.softThresholdTokens ?? FALLBACK_SOFT_THRESHOLD_TOKENS;
 
   if (tokens >= softThreshold) {
-    console.log(`💾 Memory flush needed: ~${tokens} tokens (soft threshold: ${softThreshold})`);
+    log.info(`Memory flush needed: ~${tokens} tokens (soft threshold: ${softThreshold})`);
     return true;
   }
 
@@ -107,16 +116,16 @@ function flushMemoryToDailyLog(context: Context): void {
       const content = typeof msg.content === "string" ? msg.content : "[complex content]";
       summary.push(`- User: ${content.substring(0, 100)}${content.length > 100 ? "..." : ""}`);
     } else if (msg.role === "assistant") {
-      const textBlocks = msg.content.filter((b: any) => b.type === "text");
+      const textBlocks = msg.content.filter((b): b is TextContent => b.type === "text");
       if (textBlocks.length > 0) {
-        const text = (textBlocks[0] as any).text || "";
+        const text = textBlocks[0].text || "";
         summary.push(`- Assistant: ${text.substring(0, 100)}${text.length > 100 ? "..." : ""}`);
       }
     }
   }
 
   writeSummaryToDailyLog(summary.join("\n"));
-  console.log(`✅ Memory flushed to daily log`);
+  log.info(`Memory flushed to daily log`);
 }
 
 export function shouldCompact(
@@ -131,14 +140,14 @@ export function shouldCompact(
   const messageCount = context.messages.length;
 
   if (config.maxMessages && messageCount >= config.maxMessages) {
-    console.log(`⚠️  Compaction needed: ${messageCount} messages (max: ${config.maxMessages})`);
+    log.info(`Compaction needed: ${messageCount} messages (max: ${config.maxMessages})`);
     return true;
   }
 
   if (config.maxTokens) {
     const tokens = tokenCount ?? calculateContextTokens(context);
     if (tokens >= config.maxTokens) {
-      console.log(`⚠️  Compaction needed: ~${tokens} tokens (max: ${config.maxTokens})`);
+      log.info(`Compaction needed: ~${tokens} tokens (max: ${config.maxTokens})`);
       return true;
     }
   }
@@ -168,10 +177,9 @@ export async function compactContext(
     const ids = new Set<string>();
     for (const msg of msgs) {
       if (msg.role === "assistant" && Array.isArray(msg.content)) {
-        for (const block of msg.content as any[]) {
-          if (block.type === "toolCall" || block.type === "tool_use") {
-            const id = block.id || block.toolCallId;
-            if (id) ids.add(id);
+        for (const block of msg.content) {
+          if (block.type === "toolCall") {
+            if (block.id) ids.add(block.id);
           }
         }
       }
@@ -183,8 +191,7 @@ export async function compactContext(
     const toolUseIds = collectToolUseIds(msgs);
     for (const msg of msgs) {
       if (msg.role === "toolResult") {
-        const toolCallId = (msg as any).toolCallId;
-        if (toolCallId && !toolUseIds.has(toolCallId)) {
+        if (msg.toolCallId && !toolUseIds.has(msg.toolCallId)) {
           return true;
         }
       }
@@ -203,15 +210,15 @@ export async function compactContext(
   }
 
   if (hasOrphanedToolResults(context.messages.slice(cutIndex))) {
-    console.warn(`⚠️ Compaction: couldn't find clean cut point, keeping all messages`);
+    log.warn(`Compaction: couldn't find clean cut point, keeping all messages`);
     return context;
   }
 
   const recentMessages = context.messages.slice(cutIndex);
   const oldMessages = context.messages.slice(0, cutIndex);
 
-  console.log(
-    `🗜️  Compacting ${oldMessages.length} old messages, keeping ${recentMessages.length} recent (cut at clean boundary)`
+  log.info(
+    `Compacting ${oldMessages.length} old messages, keeping ${recentMessages.length} recent (cut at clean boundary)`
   );
 
   try {
@@ -242,9 +249,7 @@ Keep each section concise. Omit a section if empty. Preserve specific names, num
       utilityModel,
     });
 
-    console.log(
-      `  ✅ AI Summary: ${result.tokensUsed} tokens, ${result.chunksProcessed} chunks processed`
-    );
+    log.info(`AI Summary: ${result.tokensUsed} tokens, ${result.chunksProcessed} chunks processed`);
 
     const summaryText = `[Auto-compacted ${oldMessages.length} messages]\n\n${result.summary}`;
 
@@ -259,7 +264,7 @@ Keep each section concise. Omit a section if empty. Preserve specific names, num
       messages: [summaryMessage, ...recentMessages],
     };
   } catch (error) {
-    console.error("AI summarization failed, using fallback:", error);
+    log.error({ err: error }, "AI summarization failed, using fallback");
 
     const summaryText = `[Auto-compacted: ${oldMessages.length} earlier messages from this conversation]`;
 
@@ -287,7 +292,7 @@ export async function compactAndSaveTranscript(
 ): Promise<string> {
   const newSessionId = randomUUID();
 
-  console.log(`📝 Creating compacted transcript: ${sessionId} → ${newSessionId}`);
+  log.info(`Creating compacted transcript: ${sessionId} → ${newSessionId}`);
 
   if (chatId) {
     await saveSessionMemory({
@@ -339,7 +344,7 @@ export class CompactionManager {
       flushMemoryToDailyLog(context);
     }
 
-    console.log(`🗜️  Auto-compacting session ${sessionId}`);
+    log.info(`Auto-compacting session ${sessionId}`);
     const newSessionId = await compactAndSaveTranscript(
       sessionId,
       context,
@@ -349,7 +354,7 @@ export class CompactionManager {
       provider,
       utilityModel
     );
-    console.log(`✅ Compaction complete: ${newSessionId}`);
+    log.info(`Compaction complete: ${newSessionId}`);
 
     return newSessionId;
   }

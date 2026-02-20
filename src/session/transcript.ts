@@ -11,6 +11,9 @@ import {
 import { join, dirname } from "path";
 import type { Message, AssistantMessage } from "@mariozechner/pi-ai";
 import { TELETON_ROOT } from "../workspace/paths.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Session");
 
 const SESSIONS_DIR = join(TELETON_ROOT, "sessions");
 
@@ -33,7 +36,7 @@ export function appendToTranscript(sessionId: string, message: Message | Assista
   try {
     appendFileSync(transcriptPath, line, "utf-8");
   } catch (error) {
-    console.error(`Failed to append to transcript ${sessionId}:`, error);
+    log.error({ err: error }, `Failed to append to transcript ${sessionId}`);
   }
 }
 
@@ -41,10 +44,8 @@ function extractToolCallIds(msg: Message | AssistantMessage): Set<string> {
   const ids = new Set<string>();
   if (msg.role === "assistant" && Array.isArray(msg.content)) {
     for (const block of msg.content) {
-      const blockType = (block as any).type;
-      if (blockType === "toolCall" || blockType === "tool_use") {
-        const id = (block as any).id || (block as any).toolCallId || (block as any).tool_use_id;
-        if (id) ids.add(id);
+      if (block.type === "toolCall") {
+        if (block.id) ids.add(block.id);
       }
     }
   }
@@ -70,20 +71,17 @@ function sanitizeMessages(
       const newToolIds = extractToolCallIds(msg);
 
       if (pendingToolCallIds.size > 0 && newToolIds.size > 0) {
-        console.warn(
-          `⚠️ Found ${pendingToolCallIds.size} pending tool results that were never received`
-        );
+        log.warn(`Found ${pendingToolCallIds.size} pending tool results that were never received`);
       }
 
       pendingToolCallIds = newToolIds;
       sanitized.push(msg);
-    } else if (msg.role === "toolResult" || (msg as any).role === "tool_result") {
-      const toolCallId =
-        (msg as any).toolCallId || (msg as any).tool_use_id || (msg as any).tool_call_id;
+    } else if (msg.role === "toolResult") {
+      const toolCallId = msg.toolCallId;
 
       if (!toolCallId || typeof toolCallId !== "string") {
         removedCount++;
-        console.warn(`🧹 Removing toolResult with missing/invalid toolCallId`);
+        log.warn(`Removing toolResult with missing/invalid toolCallId`);
         continue;
       }
 
@@ -92,13 +90,13 @@ function sanitizeMessages(
         sanitized.push(msg);
       } else {
         removedCount++;
-        console.warn(`🧹 Removing orphaned toolResult: ${toolCallId.slice(0, 20)}...`);
+        log.warn(`Removing orphaned toolResult: ${toolCallId.slice(0, 20)}...`);
         continue;
       }
     } else if (msg.role === "user") {
       if (pendingToolCallIds.size > 0) {
-        console.warn(
-          `⚠️ User message arrived while ${pendingToolCallIds.size} tool results pending - marking them as orphaned`
+        log.warn(
+          `User message arrived while ${pendingToolCallIds.size} tool results pending - marking them as orphaned`
         );
         pendingToolCallIds.clear();
       }
@@ -109,7 +107,7 @@ function sanitizeMessages(
   }
 
   if (removedCount > 0) {
-    console.log(`🧹 Sanitized ${removedCount} orphaned/out-of-order toolResult(s) from transcript`);
+    log.info(`Sanitized ${removedCount} orphaned/out-of-order toolResult(s) from transcript`);
   }
 
   return sanitized;
@@ -133,19 +131,19 @@ export function readTranscript(sessionId: string): (Message | AssistantMessage)[
           return JSON.parse(line);
         } catch {
           corruptCount++;
-          console.warn(`⚠️ Skipping corrupt line ${i + 1} in transcript ${sessionId}`);
+          log.warn(`Skipping corrupt line ${i + 1} in transcript ${sessionId}`);
           return null;
         }
       })
       .filter(Boolean);
 
     if (corruptCount > 0) {
-      console.warn(`⚠️ ${corruptCount} corrupt line(s) skipped in transcript ${sessionId}`);
+      log.warn(`${corruptCount} corrupt line(s) skipped in transcript ${sessionId}`);
     }
 
     return sanitizeMessages(messages);
   } catch (error) {
-    console.error(`Failed to read transcript ${sessionId}:`, error);
+    log.error({ err: error }, `Failed to read transcript ${sessionId}`);
     return [];
   }
 }
@@ -172,10 +170,10 @@ export function deleteTranscript(sessionId: string): boolean {
 
   try {
     unlinkSync(transcriptPath);
-    console.log(`🗑️ Deleted transcript: ${sessionId}`);
+    log.info(`Deleted transcript: ${sessionId}`);
     return true;
   } catch (error) {
-    console.error(`Failed to delete transcript ${sessionId}:`, error);
+    log.error({ err: error }, `Failed to delete transcript ${sessionId}`);
     return false;
   }
 }
@@ -194,10 +192,10 @@ export function archiveTranscript(sessionId: string): boolean {
 
   try {
     renameSync(transcriptPath, archivePath);
-    console.log(`📦 Archived transcript: ${sessionId} → ${timestamp}.archived`);
+    log.info(`Archived transcript: ${sessionId} → ${timestamp}.archived`);
     return true;
   } catch (error) {
-    console.error(`Failed to archive transcript ${sessionId}:`, error);
+    log.error({ err: error }, `Failed to archive transcript ${sessionId}`);
     return false;
   }
 }
@@ -224,11 +222,11 @@ export function cleanupOldTranscripts(maxAgeDays: number = 30): number {
       } catch {}
     }
   } catch (error) {
-    console.error("Failed to cleanup old transcripts:", error);
+    log.error({ err: error }, "Failed to cleanup old transcripts");
   }
 
   if (deleted > 0) {
-    console.log(`🧹 Cleaned up ${deleted} transcript(s) older than ${maxAgeDays} days`);
+    log.info(`Cleaned up ${deleted} transcript(s) older than ${maxAgeDays} days`);
   }
 
   return deleted;

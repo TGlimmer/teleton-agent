@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { TELEGRAM_MAX_MESSAGE_LENGTH } from "../../../../constants/limits.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_send_message tool
@@ -59,10 +63,10 @@ export const telegramSendMessageExecutor: ToolExecutor<SendMessageParams> = asyn
       },
     };
   } catch (error) {
-    console.error("Error sending Telegram message:", error);
+    log.error({ err: error }, "Error sending Telegram message");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

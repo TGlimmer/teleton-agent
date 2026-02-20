@@ -1,4 +1,12 @@
-import { complete, type Context, type Message, type Model, type Api } from "@mariozechner/pi-ai";
+import {
+  complete,
+  type Context,
+  type Message,
+  type Model,
+  type Api,
+  type TextContent,
+  type ToolCall,
+} from "@mariozechner/pi-ai";
 import { getUtilityModel } from "../agent/client.js";
 import type { SupportedProvider } from "../config/providers.js";
 import {
@@ -10,6 +18,10 @@ import {
   ADAPTIVE_CHUNK_RATIO_TRIGGER,
   DEFAULT_SUMMARY_FALLBACK_TOKENS,
 } from "../constants/limits.js";
+import { getErrorMessage } from "../utils/errors.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Memory");
 
 export interface SummarizationConfig {
   apiKey: string;
@@ -74,9 +86,8 @@ function extractMessageContent(message: Message): string {
   if (message.role === "user") {
     return typeof message.content === "string" ? message.content : "[complex content]";
   } else if (message.role === "assistant") {
-    const content = message.content as Array<{ type: string; text?: string }>;
-    return content
-      .filter((block) => block.type === "text" && block.text)
+    return message.content
+      .filter((block): block is TextContent => block.type === "text")
       .map((block) => block.text)
       .join("\n");
   }
@@ -93,20 +104,18 @@ export function formatMessagesForSummary(messages: Message[]): string {
       const body = bodyMatch ? bodyMatch[1] : content;
       formatted.push(`User: ${body}`);
     } else if (msg.role === "assistant") {
-      const content = msg.content as Array<{ type: string; text?: string }>;
-      const textBlocks = content.filter((b) => b.type === "text" && b.text);
+      const textBlocks = msg.content.filter((b): b is TextContent => b.type === "text");
       if (textBlocks.length > 0) {
         const text = textBlocks.map((b) => b.text).join("\n");
         formatted.push(`Assistant: ${text}`);
       }
-      const toolCalls = content.filter((b) => b.type === "toolCall");
+      const toolCalls = msg.content.filter((b): b is ToolCall => b.type === "toolCall");
       if (toolCalls.length > 0) {
-        const toolNames = toolCalls.map((b: any) => b.name).join(", ");
+        const toolNames = toolCalls.map((b) => b.name).join(", ");
         formatted.push(`[Used tools: ${toolNames}]`);
       }
     } else if (msg.role === "toolResult") {
-      const toolMsg = msg as any;
-      formatted.push(`[Tool result: ${toolMsg.toolName}]`);
+      formatted.push(`[Tool result: ${msg.toolName}]`);
     }
   }
 
@@ -204,10 +213,8 @@ Be specific but concise. Preserve critical information.`;
     const summary = textContent?.type === "text" ? textContent.text : "";
     return summary.trim() || "Unable to generate summary.";
   } catch (error) {
-    console.error("Summarization error:", error);
-    throw new Error(
-      `Summarization failed: ${error instanceof Error ? error.message : String(error)}`
-    );
+    log.error({ err: error }, "Summarization error");
+    throw new Error(`Summarization failed: ${getErrorMessage(error)}`);
   }
 }
 
@@ -234,7 +241,7 @@ export async function summarizeInChunks(params: {
 
   const chunks = splitMessagesByTokens(params.messages, params.maxChunkTokens);
 
-  console.log(`📊 Splitting into ${chunks.length} chunks for summarization`);
+  log.info(`Splitting into ${chunks.length} chunks for summarization`);
 
   if (chunks.length === 1) {
     const summary = await summarizeViaClaude({
@@ -256,7 +263,7 @@ export async function summarizeInChunks(params: {
   const partialSummaries: string[] = [];
 
   for (let i = 0; i < chunks.length; i++) {
-    console.log(`  📝 Summarizing chunk ${i + 1}/${chunks.length} (${chunks[i].length} messages)`);
+    log.info(`Summarizing chunk ${i + 1}/${chunks.length} (${chunks[i].length} messages)`);
 
     const partial = await summarizeViaClaude({
       messages: chunks[i],
@@ -272,7 +279,7 @@ export async function summarizeInChunks(params: {
     partialSummaries.push(partial);
   }
 
-  console.log(`  🔗 Merging ${partialSummaries.length} partial summaries`);
+  log.info(`Merging ${partialSummaries.length} partial summaries`);
 
   const provider = params.provider || "anthropic";
   const model = getUtilityModel(provider, params.utilityModel);
@@ -331,8 +338,8 @@ export async function summarizeWithFallback(params: {
   const chunkRatio = computeAdaptiveChunkRatio(params.messages, params.contextWindow);
   const maxChunkTokens = Math.floor(params.contextWindow * chunkRatio);
 
-  console.log(
-    `🧠 AI Summarization: ${params.messages.length} messages, chunk ratio: ${(chunkRatio * 100).toFixed(0)}%`
+  log.info(
+    `AI Summarization: ${params.messages.length} messages, chunk ratio: ${(chunkRatio * 100).toFixed(0)}%`
   );
 
   try {
@@ -346,8 +353,8 @@ export async function summarizeWithFallback(params: {
       utilityModel: params.utilityModel,
     });
   } catch (fullError) {
-    console.warn(
-      `⚠️  Full summarization failed: ${fullError instanceof Error ? fullError.message : String(fullError)}`
+    log.warn(
+      `Full summarization failed: ${fullError instanceof Error ? fullError.message : String(fullError)}`
     );
   }
 
@@ -366,8 +373,8 @@ export async function summarizeWithFallback(params: {
     }
   }
 
-  console.log(
-    `  🔄 Fallback: Processing ${smallMessages.length} messages, skipping ${oversizedNotes.length} oversized`
+  log.info(
+    `Fallback: Processing ${smallMessages.length} messages, skipping ${oversizedNotes.length} oversized`
   );
 
   if (smallMessages.length > 0) {
@@ -389,8 +396,8 @@ export async function summarizeWithFallback(params: {
         chunksProcessed: result.chunksProcessed,
       };
     } catch (partialError) {
-      console.warn(
-        `⚠️  Partial summarization also failed: ${partialError instanceof Error ? partialError.message : String(partialError)}`
+      log.warn(
+        `Partial summarization also failed: ${partialError instanceof Error ? partialError.message : String(partialError)}`
       );
     }
   }

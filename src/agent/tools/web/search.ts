@@ -5,6 +5,7 @@ import { tavily } from "@tavily/core";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { WEB_SEARCH_MAX_RESULTS } from "../../../constants/limits.js";
 import { sanitizeForContext } from "../../../utils/sanitize.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 interface WebSearchParams {
   query: string;
@@ -85,7 +86,7 @@ export const webSearchExecutor: ToolExecutor<WebSearchParams> = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

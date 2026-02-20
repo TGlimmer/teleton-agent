@@ -3,6 +3,10 @@ import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { DEDUST_API_URL } from "./constants.js";
 import { fetchWithTimeout } from "../../../utils/fetch.js";
 import { findAsset, findAssetBySymbol, fromUnits } from "./asset-cache.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DedustTokenInfoParams {
   token: string;
 }
@@ -170,10 +174,10 @@ export const dedustTokenInfoExecutor: ToolExecutor<DedustTokenInfoParams> = asyn
       },
     };
   } catch (error) {
-    console.error("Error in dedust_token_info:", error);
+    log.error({ err: error }, "Error in dedust_token_info");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

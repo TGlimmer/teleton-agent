@@ -5,6 +5,10 @@ import { CustomFile } from "telegram/client/uploads.js";
 import { readFileSync, statSync } from "fs";
 import { basename } from "path";
 import { validateReadPath, WorkspaceSecurityError } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_send_story tool
@@ -142,19 +146,24 @@ export const telegramSendStoryExecutor: ToolExecutor<SendStoryParams> = async (
       })
     );
 
+    const storyUpdate =
+      result instanceof Api.Updates
+        ? result.updates.find((u) => u.className === "UpdateStory")
+        : undefined;
+
     return {
       success: true,
       data: {
-        storyId: (result as any).id || null,
+        storyId: storyUpdate?.story?.id ?? null,
         privacy,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
       },
     };
   } catch (error) {
-    console.error("Error sending Telegram story:", error);
+    log.error({ err: error }, "Error sending Telegram story");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

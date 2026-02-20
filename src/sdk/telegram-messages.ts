@@ -1,5 +1,6 @@
-import { randomBytes } from "crypto";
+import { randomLong } from "../utils/gramjs-bigint.js";
 import type { TelegramBridge } from "../telegram/bridge.js";
+import type { Api } from "telegram";
 import type { PluginLogger, SimpleMessage, MediaSendOptions } from "@teleton-agent/sdk";
 import { PluginSDKError } from "@teleton-agent/sdk";
 
@@ -76,19 +77,18 @@ export function createTelegramMessagesSDK(bridge: TelegramBridge, log: PluginLog
             fromPeer: fromChatId,
             toPeer: toChatId,
             id: [messageId],
-            randomId: [randomBytes(8).readBigUInt64BE() as any],
+            randomId: [randomLong()],
           })
         );
 
         // Extract forwarded message ID from updates
-        const updates = result as any;
-        if (updates.updates) {
-          for (const update of updates.updates) {
+        if (result instanceof Api.Updates || result instanceof Api.UpdatesCombined) {
+          for (const update of result.updates) {
             if (
               update.className === "UpdateNewMessage" ||
               update.className === "UpdateNewChannelMessage"
             ) {
-              return update.message.id;
+              return (update as Api.UpdateNewMessage).message.id;
             }
           }
         }
@@ -146,7 +146,7 @@ export function createTelegramMessagesSDK(bridge: TelegramBridge, log: PluginLog
           })
         );
 
-        const resultData = result as any;
+        const resultData = result as Api.messages.Messages;
         return (resultData.messages ?? []).map(toSimpleMessage);
       } catch (err) {
         if (err instanceof PluginSDKError) throw err;
@@ -165,7 +165,7 @@ export function createTelegramMessagesSDK(bridge: TelegramBridge, log: PluginLog
           schedule: scheduleDate,
         });
 
-        return (result as any).id ?? 0;
+        return result.id ?? 0;
       } catch (err) {
         if (err instanceof PluginSDKError) throw err;
         throw new PluginSDKError(
@@ -201,7 +201,7 @@ export function createTelegramMessagesSDK(bridge: TelegramBridge, log: PluginLog
         const messages: SimpleMessage[] = [];
         if ("messages" in result) {
           for (const msg of result.messages) {
-            if ((msg as any).className === "Message") {
+            if (msg.className === "Message") {
               messages.push(toSimpleMessage(msg));
             }
           }

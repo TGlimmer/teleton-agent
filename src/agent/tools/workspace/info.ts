@@ -5,6 +5,7 @@ import { lstatSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { WORKSPACE_ROOT, WORKSPACE_PATHS, MAX_FILE_SIZES } from "../../../workspace/index.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 const MEMES_DIR = WORKSPACE_PATHS.MEMES_DIR;
 
@@ -150,7 +151,7 @@ export const workspaceInfoExecutor: ToolExecutor<WorkspaceInfoParams> = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -6,6 +6,9 @@ import type { ToolContext } from "../agent/tools/types.js";
 import { telegramGetMyGiftsExecutor } from "../agent/tools/telegram/gifts/get-my-gifts.js";
 import type { ReceivedGift } from "./types.js";
 import { DEFAULT_GIFTS_QUERY_LIMIT } from "../constants/limits.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Deal");
 
 export class GiftDetector {
   private seenGifts: Map<number, Set<string>> = new Map(); // userId → Set<msgId>
@@ -57,12 +60,12 @@ export class GiftDetector {
       this.seenGifts.set(userId, currentMsgIds);
 
       if (newGifts.length > 0) {
-        console.log(`🎁 [GiftDetector] Detected ${newGifts.length} new gift(s) for user ${userId}`);
+        log.info(`Detected ${newGifts.length} new gift(s) for user ${userId}`);
       }
 
       return newGifts;
     } catch (error) {
-      console.error(`❌ [GiftDetector] Error detecting gifts for user ${userId}:`, error);
+      log.error({ err: error }, `Error detecting gifts for user ${userId}`);
       return [];
     }
   }

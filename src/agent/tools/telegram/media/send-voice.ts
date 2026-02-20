@@ -17,6 +17,10 @@ import {
   type TTSProvider,
 } from "../../../../services/tts.js";
 import { validateReadPath, WorkspaceSecurityError } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface SendVoiceParams {
   chatId: string;
@@ -235,10 +239,10 @@ export const telegramSendVoiceExecutor: ToolExecutor<SendVoiceParams> = async (
       data: responseData,
     };
   } catch (error) {
-    console.error("Error sending voice message:", error);
+    log.error({ err: error }, "Error sending voice message");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   } finally {
     // Cleanup generated TTS file

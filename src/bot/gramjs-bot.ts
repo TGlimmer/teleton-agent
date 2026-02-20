@@ -16,6 +16,9 @@ import { Logger, LogLevel } from "telegram/extensions/Logger.js";
 import bigInt from "big-integer";
 import { GRAMJS_RETRY_DELAY_MS } from "../constants/timeouts.js";
 import { withFloodRetry } from "../telegram/flood-retry.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Bot");
 
 /**
  * Decode Bot API inline_message_id string to GramJS InputBotInlineMessageID TL object.
@@ -68,7 +71,7 @@ export class GramJSBotClient {
       this.connected = true;
       // Styled buttons ready (MTProto connected)
     } catch (error) {
-      console.error("❌ [GramJS Bot] Connection failed:", error);
+      log.error({ err: error }, "[GramJS Bot] Connection failed");
       throw error;
     }
   }
@@ -111,7 +114,7 @@ export class GramJSBotClient {
     if (!this.connected) throw new Error("GramJS bot not connected");
 
     const id = decodeInlineMessageId(params.inlineMessageId);
-    const dcId = (id as any).dcId as number;
+    const dcId = "dcId" in id ? (id.dcId as number) : undefined;
 
     await withFloodRetry(() =>
       this.client.invoke(
@@ -132,9 +135,9 @@ export class GramJSBotClient {
     try {
       await this.client.disconnect();
       this.connected = false;
-      console.log("🛑 [GramJS Bot] Disconnected");
+      log.info("[GramJS Bot] Disconnected");
     } catch (error) {
-      console.error("❌ [GramJS Bot] Disconnect error:", error);
+      log.error({ err: error }, "[GramJS Bot] Disconnect error");
     }
   }
 }

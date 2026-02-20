@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 function extractInviteHash(input: string): string | null {
   const patterns = [
@@ -58,13 +62,15 @@ export const telegramJoinChannelExecutor: ToolExecutor<JoinChannelParams> = asyn
 
       if (checkResult instanceof Api.ChatInviteAlready) {
         const chat = checkResult.chat;
+        const chatTitle =
+          chat instanceof Api.Channel || chat instanceof Api.Chat ? chat.title : channel;
         return {
           success: true,
           data: {
             channel: channel,
-            channelId: (chat as any)?.id?.toString() || null,
-            channelTitle: (chat as any)?.title || channel,
-            message: `Already a member of ${(chat as any)?.title || channel}`,
+            channelId: chat.id?.toString() || null,
+            channelTitle: chatTitle,
+            message: `Already a member of ${chatTitle}`,
           },
         };
       }
@@ -74,9 +80,15 @@ export const telegramJoinChannelExecutor: ToolExecutor<JoinChannelParams> = asyn
       );
 
       // Extract chat info from updates
-      const chats = (updates as any)?.chats || [];
+      const chats =
+        updates instanceof Api.Updates || updates instanceof Api.UpdatesCombined
+          ? updates.chats
+          : [];
       const joinedChat = chats[0];
-      const chatTitle = joinedChat?.title || channel;
+      const chatTitle =
+        joinedChat instanceof Api.Channel || joinedChat instanceof Api.Chat
+          ? joinedChat.title
+          : channel;
       const chatId = joinedChat?.id?.toString() || null;
 
       return {
@@ -121,11 +133,12 @@ export const telegramJoinChannelExecutor: ToolExecutor<JoinChannelParams> = asyn
     );
 
     const channelTitle =
-      (channelEntity as any)?.title || (channelEntity as any)?.username || channel;
-    const channelId =
-      (channelEntity as any)?.id?.toString() ||
-      (channelEntity as any)?.channelId?.toString() ||
-      null;
+      channelEntity instanceof Api.Channel
+        ? channelEntity.title
+        : channelEntity instanceof Api.User
+          ? channelEntity.username
+          : channel;
+    const channelId = channelEntity.id?.toString() || null;
 
     return {
       success: true,
@@ -137,7 +150,7 @@ export const telegramJoinChannelExecutor: ToolExecutor<JoinChannelParams> = asyn
       },
     };
   } catch (error) {
-    console.error("Error joining Telegram channel:", error);
+    log.error({ err: error }, "Error joining Telegram channel");
 
     if (error instanceof Error) {
       if (error.message.includes("USER_ALREADY_PARTICIPANT")) {
@@ -180,7 +193,7 @@ export const telegramJoinChannelExecutor: ToolExecutor<JoinChannelParams> = asyn
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

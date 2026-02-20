@@ -1,5 +1,8 @@
 import type { TelegramBridge } from "../bridge.js";
 import type Database from "better-sqlite3";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 export type CallbackHandler = (data: {
   action: string;
@@ -30,7 +33,7 @@ export class CallbackQueryHandler {
       const messageId = event.msgId || 0;
       const userId = Number(event.userId);
 
-      console.log(`📞 [Callback] Received: data="${data}" from user ${userId} in chat ${chatId}`);
+      log.info(`[Callback] Received: data="${data}" from user ${userId} in chat ${chatId}`);
 
       const parts = data.split(":");
       const action = parts[0];
@@ -38,7 +41,7 @@ export class CallbackQueryHandler {
 
       const handler = this.handlers.get(action);
       if (!handler) {
-        console.warn(`⚠️ No handler for callback action: ${action}`);
+        log.warn(`No handler for callback action: ${action}`);
         await this.answerCallback(queryId, "Unknown action");
         return;
       }
@@ -52,7 +55,7 @@ export class CallbackQueryHandler {
         userId,
       });
     } catch (error) {
-      console.error("❌ Error handling callback query:", error);
+      log.error({ err: error }, "Error handling callback query");
       if (event?.queryId) {
         await this.answerCallback(event.queryId, "An error occurred. Please try again.");
       }
@@ -63,7 +66,7 @@ export class CallbackQueryHandler {
     try {
       await this.bridge.getClient().answerCallbackQuery(queryId, { message, alert });
     } catch (error) {
-      console.error("Error answering callback:", error);
+      log.error({ err: error }, "Error answering callback");
     }
   }
 }

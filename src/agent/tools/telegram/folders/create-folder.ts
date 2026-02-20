@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_create_folder tool
@@ -84,10 +88,14 @@ export const telegramCreateFolderExecutor: ToolExecutor<CreateFolderParams> = as
 
     // Get existing filters to determine next ID
     // GetDialogFilters returns messages.DialogFilters { filters: [] } (not a plain array)
-    const result = await gramJsClient.invoke(new Api.messages.GetDialogFilters());
-    const filters: any[] = Array.isArray(result) ? result : ((result as any).filters ?? []);
+    const dialogFilters = (await gramJsClient.invoke(
+      new Api.messages.GetDialogFilters()
+    )) as Api.messages.DialogFilters;
+    const filters = dialogFilters.filters ?? [];
     // Only consider DialogFilter and DialogFilterChatlist (skip DialogFilterDefault which has no id)
-    const usedIds = filters.filter((f: any) => typeof f.id === "number").map((f: any) => f.id);
+    const usedIds = filters
+      .filter((f): f is Api.DialogFilter => "id" in f && typeof f.id === "number")
+      .map((f) => f.id);
     // Telegram reserves IDs 0-1; valid custom folder IDs start at 2
     const newId = usedIds.length > 0 ? Math.max(...usedIds) + 1 : 2;
 
@@ -127,10 +135,10 @@ export const telegramCreateFolderExecutor: ToolExecutor<CreateFolderParams> = as
       },
     };
   } catch (error) {
-    console.error("Error creating folder:", error);
+    log.error({ err: error }, "Error creating folder");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

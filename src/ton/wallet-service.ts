@@ -1,11 +1,14 @@
 import { mnemonicNew, mnemonicToPrivateKey, mnemonicValidate } from "@ton/crypto";
 import { WalletContractV5R1, TonClient, fromNano } from "@ton/ton";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { getCachedHttpEndpoint } from "./endpoint.js";
 import { fetchWithTimeout } from "../utils/fetch.js";
 import { TELETON_ROOT } from "../workspace/paths.js";
 import { tonapiFetch, COINGECKO_API_URL } from "../constants/api-endpoints.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("TON");
 
 const WALLET_FILE = join(TELETON_ROOT, "wallet.json");
 
@@ -60,10 +63,7 @@ export function saveWallet(wallet: WalletData): void {
     mkdirSync(dir, { recursive: true });
   }
 
-  writeFileSync(WALLET_FILE, JSON.stringify(wallet, null, 2), "utf-8");
-
-  // Set file permissions to 600 (owner read/write only)
-  chmodSync(WALLET_FILE, 0o600);
+  writeFileSync(WALLET_FILE, JSON.stringify(wallet, null, 2), { encoding: "utf-8", mode: 0o600 });
 
   // Invalidate caches so next loadWallet()/getKeyPair() re-reads
   _walletCache = undefined;
@@ -86,7 +86,7 @@ export function loadWallet(): WalletData | null {
     _walletCache = JSON.parse(content) as WalletData;
     return _walletCache;
   } catch (error) {
-    console.error("Failed to load wallet:", error);
+    log.error({ err: error }, "Failed to load wallet");
     _walletCache = null;
     return null;
   }
@@ -174,7 +174,7 @@ export async function getWalletBalance(address: string): Promise<{
       balanceNano: balance.toString(),
     };
   } catch (error) {
-    console.error("Failed to get balance:", error);
+    log.error({ err: error }, "Failed to get balance");
     return null;
   }
 }
@@ -230,7 +230,7 @@ export async function getTonPrice(): Promise<{
       return _tonPriceCache;
     }
   } catch (error) {
-    console.error("Failed to get TON price:", error);
+    log.error({ err: error }, "Failed to get TON price");
   }
 
   return null;

@@ -5,6 +5,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface CreateGroupParams {
   title: string;
@@ -48,7 +52,7 @@ export const telegramCreateGroupExecutor: ToolExecutor<CreateGroupParams> = asyn
           );
         }
       } catch (e) {
-        console.warn(`Could not resolve user ${user}:`, e);
+        log.warn({ err: e }, `Could not resolve user ${user}`);
       }
     }
 
@@ -71,8 +75,9 @@ export const telegramCreateGroupExecutor: ToolExecutor<CreateGroupParams> = asyn
     let chatTitle: string | undefined;
 
     // Result is InvitedUsers which has updates property
-    const updates = (result as any).updates;
-    if (updates && updates.chats) {
+    const invitedUsers = result as Api.messages.InvitedUsers;
+    const updates = invitedUsers.updates;
+    if (updates instanceof Api.Updates && updates.chats) {
       for (const chat of updates.chats) {
         if (chat instanceof Api.Chat) {
           chatId = chat.id.toString();
@@ -92,10 +97,10 @@ export const telegramCreateGroupExecutor: ToolExecutor<CreateGroupParams> = asyn
       },
     };
   } catch (error) {
-    console.error("Error in telegram_create_group:", error);
+    log.error({ err: error }, "Error in telegram_create_group");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

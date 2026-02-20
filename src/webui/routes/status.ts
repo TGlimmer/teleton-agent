@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { WebUIServerDeps, StatusResponse, APIResponse } from "../types.js";
+import { getErrorMessage } from "../../utils/errors.js";
 
 export function createStatusRoutes(deps: WebUIServerDeps) {
   const app = new Hono();
@@ -18,7 +19,6 @@ export function createStatusRoutes(deps: WebUIServerDeps) {
         model: config.agent.model,
         provider: config.agent.provider,
         sessionCount: sessionCountRow?.count ?? 0,
-        paused: false, // TODO: get from message handler
         toolCount: deps.toolRegistry.getAll().length,
       };
 
@@ -31,7 +31,7 @@ export function createStatusRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }

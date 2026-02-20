@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_create_channel tool
@@ -74,10 +78,10 @@ export const telegramCreateChannelExecutor: ToolExecutor<CreateChannelParams> = 
       },
     };
   } catch (error) {
-    console.error("Error creating channel:", error);
+    log.error({ err: error }, "Error creating channel");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

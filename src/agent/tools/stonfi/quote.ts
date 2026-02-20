@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { StonApiClient } from "@ston-fi/api";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 // Native TON address used by STON.fi API
 const NATIVE_TON_ADDRESS = "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c";
@@ -122,10 +126,10 @@ export const stonfiQuoteExecutor: ToolExecutor<JettonQuoteParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in stonfi_quote:", error);
+    log.error({ err: error }, "Error in stonfi_quote");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

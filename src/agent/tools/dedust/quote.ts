@@ -6,6 +6,10 @@ import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { Factory, Asset, PoolType, ReadinessStatus } from "@dedust/sdk";
 import { DEDUST_FACTORY_MAINNET, NATIVE_TON_ADDRESS } from "./constants.js";
 import { getDecimals, toUnits, fromUnits } from "./asset-cache.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DedustQuoteParams {
   from_asset: string;
   to_asset: string;
@@ -167,10 +171,10 @@ export const dedustQuoteExecutor: ToolExecutor<DedustQuoteParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dedust_quote:", error);
+    log.error({ err: error }, "Error in dedust_quote");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

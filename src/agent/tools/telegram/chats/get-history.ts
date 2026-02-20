@@ -1,5 +1,10 @@
 import { Type } from "@sinclair/typebox";
+import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_get_history tool
@@ -76,7 +81,9 @@ export const telegramGetHistoryExecutor: ToolExecutor<GetHistoryParams> = async 
       text: msg.message || "",
       senderId: msg.senderId?.toString() || null,
       senderName: msg.sender
-        ? (msg.sender as any).firstName || (msg.sender as any).username || null
+        ? msg.sender instanceof Api.User
+          ? msg.sender.firstName || msg.sender.username || null
+          : null
         : null,
       timestamp: msg.date,
       isOutgoing: msg.out || false,
@@ -91,10 +98,10 @@ export const telegramGetHistoryExecutor: ToolExecutor<GetHistoryParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error getting Telegram history:", error);
+    log.error({ err: error }, "Error getting Telegram history");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

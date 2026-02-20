@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface JettonHoldersParams {
   jetton_address: string;
   limit?: number;
@@ -102,10 +106,10 @@ export const jettonHoldersExecutor: ToolExecutor<JettonHoldersParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_holders:", error);
+    log.error({ err: error }, "Error in jetton_holders");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

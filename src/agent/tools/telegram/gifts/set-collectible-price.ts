@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for setting collectible price
@@ -69,9 +73,9 @@ export const telegramSetCollectiblePriceExecutor: ToolExecutor<SetCollectiblePri
       },
     };
   } catch (error) {
-    console.error("Error setting collectible price:", error);
+    log.error({ err: error }, "Error setting collectible price");
 
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     if (errorMsg.includes("STARGIFT_NOT_FOUND")) {
       return {
         success: false,

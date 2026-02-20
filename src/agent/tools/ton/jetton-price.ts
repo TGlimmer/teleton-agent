@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface JettonPriceParams {
   jetton_address: string;
@@ -108,10 +112,10 @@ export const jettonPriceExecutor: ToolExecutor<JettonPriceParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_price:", error);
+    log.error({ err: error }, "Error in jetton_price");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import type { Deal } from "../../../deals/types.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface DealCancelParams {
   dealId: string;
@@ -76,7 +80,7 @@ export const dealCancelExecutor: ToolExecutor<DealCancelParams> = async (
       )
       .run(notes, notes, dealId);
 
-    console.log(`🚫 [Deal] #${dealId} cancelled - reason: ${reason || "no reason given"}`);
+    log.info(`[Deal] #${dealId} cancelled - reason: ${reason || "no reason given"}`);
 
     // Notify user in chat if deal was accepted
     if (deal.status === "accepted") {
@@ -101,10 +105,10 @@ No payment has been processed. You can propose a new deal if you'd like.`,
       },
     };
   } catch (error) {
-    console.error("Error cancelling deal:", error);
+    log.error({ err: error }, "Error cancelling deal");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

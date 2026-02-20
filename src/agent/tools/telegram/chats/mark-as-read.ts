@@ -1,5 +1,9 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_mark_as_read tool
@@ -76,10 +80,10 @@ export const telegramMarkAsReadExecutor: ToolExecutor<MarkAsReadParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error marking messages as read:", error);
+    log.error({ err: error }, "Error marking messages as read");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -1,10 +1,13 @@
-import { readFileSync, existsSync, writeFileSync, mkdirSync, chmodSync } from "fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from "fs";
 import { parse, stringify } from "yaml";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import { ConfigSchema, type Config } from "./schema.js";
 import { getProviderMetadata, type SupportedProvider } from "./providers.js";
 import { TELETON_ROOT } from "../workspace/paths.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Config");
 
 const DEFAULT_CONFIG_PATH = join(TELETON_ROOT, "config.yaml");
 
@@ -38,7 +41,7 @@ export function loadConfig(configPath: string = DEFAULT_CONFIG_PATH): Config {
 
   // Backward compatibility: remove deprecated market key before parsing
   if (raw && typeof raw === "object" && "market" in (raw as Record<string, unknown>)) {
-    console.warn("⚠️  config.market is deprecated and ignored. Use market-api plugin instead.");
+    log.warn("config.market is deprecated and ignored. Use market-api plugin instead.");
     delete (raw as Record<string, unknown>).market;
   }
 
@@ -49,7 +52,7 @@ export function loadConfig(configPath: string = DEFAULT_CONFIG_PATH): Config {
 
   const config = result.data;
   const provider = config.agent.provider as SupportedProvider;
-  if (provider !== "anthropic" && !(raw as any).agent?.model) {
+  if (provider !== "anthropic" && !(raw as Record<string, Record<string, unknown>>).agent?.model) {
     const meta = getProviderMetadata(provider);
     config.agent.model = meta.defaultModel;
   }
@@ -117,8 +120,7 @@ export function saveConfig(config: Config, configPath: string = DEFAULT_CONFIG_P
   }
 
   config.meta.last_modified_at = new Date().toISOString();
-  writeFileSync(fullPath, stringify(config), "utf-8");
-  chmodSync(fullPath, 0o600);
+  writeFileSync(fullPath, stringify(config), { encoding: "utf-8", mode: 0o600 });
 }
 
 export function configExists(configPath: string = DEFAULT_CONFIG_PATH): boolean {

@@ -5,6 +5,10 @@ import { WalletContractV5R1, TonClient, toNano, internal } from "@ton/ton";
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DnsBidParams {
   domain: string;
   amount: number;
@@ -139,10 +143,10 @@ export const dnsBidExecutor: ToolExecutor<DnsBidParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dns_bid:", error);
+    log.error({ err: error }, "Error in dns_bid");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

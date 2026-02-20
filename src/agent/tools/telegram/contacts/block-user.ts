@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_block_user tool
@@ -54,10 +58,10 @@ export const telegramBlockUserExecutor: ToolExecutor<BlockUserParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error blocking Telegram user:", error);
+    log.error({ err: error }, "Error blocking Telegram user");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

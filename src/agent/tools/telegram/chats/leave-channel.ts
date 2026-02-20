@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_leave_channel tool
@@ -57,11 +61,12 @@ export const telegramLeaveChannelExecutor: ToolExecutor<LeaveChannelParams> = as
 
     // Get channel info before leaving
     const channelTitle =
-      (channelEntity as any)?.title || (channelEntity as any)?.username || channel;
-    const channelId =
-      (channelEntity as any)?.id?.toString() ||
-      (channelEntity as any)?.channelId?.toString() ||
-      null;
+      channelEntity instanceof Api.Channel
+        ? channelEntity.title
+        : channelEntity instanceof Api.User
+          ? channelEntity.username
+          : channel;
+    const channelId = channelEntity.id?.toString() || null;
 
     return {
       success: true,
@@ -73,7 +78,7 @@ export const telegramLeaveChannelExecutor: ToolExecutor<LeaveChannelParams> = as
       },
     };
   } catch (error) {
-    console.error("Error leaving Telegram channel:", error);
+    log.error({ err: error }, "Error leaving Telegram channel");
 
     // Handle common errors
     if (error instanceof Error) {
@@ -96,7 +101,7 @@ export const telegramLeaveChannelExecutor: ToolExecutor<LeaveChannelParams> = as
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

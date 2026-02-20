@@ -7,7 +7,6 @@ export interface StatusData {
   model: string;
   provider: string;
   sessionCount: number;
-  paused: boolean;
   toolCount: number;
 }
 

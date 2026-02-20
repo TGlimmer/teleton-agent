@@ -2,6 +2,9 @@ import { pipeline, env, type FeatureExtractionPipeline } from "@huggingface/tran
 import { join } from "node:path";
 import type { EmbeddingProvider } from "./provider.js";
 import { TELETON_ROOT } from "../../workspace/paths.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Memory");
 
 // Force model cache into ~/.teleton/models/ (writable even with npm install -g)
 env.cacheDir = join(TELETON_ROOT, "models");
@@ -10,16 +13,16 @@ let extractorPromise: Promise<FeatureExtractionPipeline> | null = null;
 
 function getExtractor(model: string): Promise<FeatureExtractionPipeline> {
   if (!extractorPromise) {
-    console.log(`📦 Loading local embedding model: ${model} (cache: ${env.cacheDir})`);
+    log.info(`Loading local embedding model: ${model} (cache: ${env.cacheDir})`);
     extractorPromise = pipeline("feature-extraction", model, {
       dtype: "fp32",
     })
       .then((ext) => {
-        console.log(`✅ Local embedding model ready`);
+        log.info(`Local embedding model ready`);
         return ext;
       })
       .catch((err) => {
-        console.error(`❌ Failed to load embedding model: ${(err as Error).message}`);
+        log.error(`Failed to load embedding model: ${(err as Error).message}`);
         extractorPromise = null;
         throw err;
       });
@@ -53,8 +56,8 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
       await getExtractor(this.model);
       return true;
     } catch (err) {
-      console.warn(
-        `⚠️ Local embedding model unavailable — falling back to FTS5-only search (no vector embeddings)`
+      log.warn(
+        `Local embedding model unavailable — falling back to FTS5-only search (no vector embeddings)`
       );
       this._disabled = true;
       return false;

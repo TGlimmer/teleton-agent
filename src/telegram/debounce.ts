@@ -1,6 +1,8 @@
 import type { TelegramMessage } from "./bridge.js";
 import { DEBOUNCE_MAX_MULTIPLIER, DEBOUNCE_MAX_BUFFER_SIZE } from "../constants/limits.js";
-import { verbose } from "../utils/logger.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 interface DebounceBuffer {
   messages: TelegramMessage[];
@@ -32,17 +34,17 @@ export class MessageDebouncer {
     const isGroup = message.isGroup ? "group" : "dm";
     const shouldDebounce = this.config.debounceMs > 0 && this.shouldDebounce(message);
 
-    verbose(
+    log.debug(
       `📩 [Debouncer] Received ${isGroup} message from ${message.senderId} in ${message.chatId} (debounce: ${shouldDebounce})`
     );
 
     if (!shouldDebounce) {
       const key = message.chatId;
       if (this.buffers.has(key)) {
-        verbose(`📤 [Debouncer] Flushing pending buffer for ${key} before immediate processing`);
+        log.debug(`📤 [Debouncer] Flushing pending buffer for ${key} before immediate processing`);
         await this.flushKey(key);
       }
-      verbose(`⚡ [Debouncer] Processing immediately (no debounce)`);
+      log.debug(`⚡ [Debouncer] Processing immediately (no debounce)`);
       await this.processMessages([message]);
       return;
     }
@@ -52,7 +54,7 @@ export class MessageDebouncer {
 
     if (existing) {
       if (existing.messages.length >= this.maxBufferSize) {
-        verbose(
+        log.debug(
           `📤 [Debouncer] Buffer full for ${key} (${existing.messages.length}/${this.maxBufferSize}), flushing`
         );
         await this.flushKey(key);
@@ -61,7 +63,7 @@ export class MessageDebouncer {
         this.resetTimer(key, newBuffer);
       } else {
         existing.messages.push(message);
-        verbose(
+        log.debug(
           `📥 [Debouncer] Added to buffer for ${key} (${existing.messages.length} messages waiting)`
         );
         this.resetTimer(key, existing);
@@ -83,7 +85,7 @@ export class MessageDebouncer {
 
     buffer.timer = setTimeout(() => {
       this.flushKey(key).catch((error) => {
-        console.error(`❌ Debouncer flush error for chat ${key}:`, error);
+        log.error({ err: error }, `Debouncer flush error for chat ${key}`);
         this.onError?.(error, buffer.messages);
       });
     }, this.config.debounceMs);
@@ -94,7 +96,7 @@ export class MessageDebouncer {
   private async flushKey(key: string): Promise<void> {
     const buffer = this.buffers.get(key);
     if (!buffer) {
-      verbose(`📭 [Debouncer] No buffer to flush for ${key}`);
+      log.debug(`📭 [Debouncer] No buffer to flush for ${key}`);
       return;
     }
 
@@ -106,18 +108,18 @@ export class MessageDebouncer {
     }
 
     if (buffer.messages.length === 0) {
-      verbose(`📭 [Debouncer] Empty buffer for ${key}, nothing to flush`);
+      log.debug(`📭 [Debouncer] Empty buffer for ${key}, nothing to flush`);
       return;
     }
 
-    verbose(`📤 [Debouncer] Flushing ${buffer.messages.length} message(s) for ${key}`);
+    log.debug(`📤 [Debouncer] Flushing ${buffer.messages.length} message(s) for ${key}`);
     await this.processMessages(buffer.messages);
   }
 
   private async processMessages(messages: TelegramMessage[]): Promise<void> {
     const sorted = messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    verbose(`🔄 [Debouncer] Processing ${sorted.length} message(s)`);
+    log.debug(`🔄 [Debouncer] Processing ${sorted.length} message(s)`);
 
     try {
       await this.onFlush(sorted);

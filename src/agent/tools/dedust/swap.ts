@@ -7,6 +7,10 @@ import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { Factory, Asset, PoolType, ReadinessStatus, JettonRoot, VaultJetton } from "@dedust/sdk";
 import { DEDUST_FACTORY_MAINNET, DEDUST_GAS, NATIVE_TON_ADDRESS } from "./constants.js";
 import { getDecimals, toUnits, fromUnits } from "./asset-cache.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface DedustSwapParams {
   from_asset: string;
   to_asset: string;
@@ -228,10 +232,10 @@ export const dedustSwapExecutor: ToolExecutor<DedustSwapParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dedust_swap:", error);
+    log.error({ err: error }, "Error in dedust_swap");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

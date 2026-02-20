@@ -4,6 +4,9 @@
  */
 
 import type { TelegramClient, Api } from "telegram";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 export interface EncodedMedia {
   base64: string;
@@ -37,19 +40,19 @@ export async function downloadAndEncodeMedia(
 
       // Check if it's a supported image type
       if (!SUPPORTED_IMAGE_TYPES.includes(mimeType)) {
-        console.log(`📷 Skipping unsupported media type: ${mimeType}`);
+        log.info(`Skipping unsupported media type: ${mimeType}`);
         return null;
       }
 
       // Check file size
       const size = Number(doc.size);
       if (size > MAX_IMAGE_SIZE) {
-        console.log(`📷 Skipping large file: ${(size / 1024 / 1024).toFixed(2)}MB > 5MB limit`);
+        log.info(`Skipping large file: ${(size / 1024 / 1024).toFixed(2)}MB > 5MB limit`);
         return null;
       }
     } else if (message.video || message.audio || message.voice || message.sticker) {
       // Video, audio, voice, sticker - not supported for vision
-      console.log(`📷 Skipping non-image media type`);
+      log.info("Skipping non-image media type");
       return null;
     } else {
       return null;
@@ -59,7 +62,7 @@ export async function downloadAndEncodeMedia(
     const buffer = await client.downloadMedia(message, {});
 
     if (!buffer) {
-      console.log(`📷 Failed to download media`);
+      log.info("Failed to download media");
       return null;
     }
 
@@ -68,14 +71,14 @@ export async function downloadAndEncodeMedia(
 
     // Check size after download
     if (data.length > MAX_IMAGE_SIZE) {
-      console.log(`📷 Downloaded file too large: ${(data.length / 1024 / 1024).toFixed(2)}MB`);
+      log.info(`Downloaded file too large: ${(data.length / 1024 / 1024).toFixed(2)}MB`);
       return null;
     }
 
     // Encode as base64
     const base64 = data.toString("base64");
 
-    console.log(`📷 Encoded ${mimeType} image: ${(data.length / 1024).toFixed(1)}KB`);
+    log.info(`Encoded ${mimeType} image: ${(data.length / 1024).toFixed(1)}KB`);
 
     return {
       base64,
@@ -83,7 +86,7 @@ export async function downloadAndEncodeMedia(
       size: data.length,
     };
   } catch (error) {
-    console.error(`📷 Error downloading media:`, error);
+    log.error({ err: error }, "Error downloading media");
     return null;
   }
 }

@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { getWalletAddress, getWalletBalance } from "../../../ton/wallet-service.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 export const tonGetBalanceTool: Tool = {
   name: "ton_get_balance",
   description: "Get your current TON wallet balance. Returns the balance in TON and nanoTON.",
@@ -41,10 +45,10 @@ export const tonGetBalanceExecutor: ToolExecutor<{}> = async (
       },
     };
   } catch (error) {
-    console.error("Error in ton_get_balance:", error);
+    log.error({ err: error }, "Error in ton_get_balance");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -6,6 +6,7 @@ import { dirname } from "path";
 import { MAX_WRITE_SIZE } from "../../../constants/limits.js";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { validateWritePath, WorkspaceSecurityError } from "../../../workspace/index.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 interface WorkspaceWriteParams {
   path: string;
@@ -115,7 +116,7 @@ export const workspaceWriteExecutor: ToolExecutor<WorkspaceWriteParams> = async 
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

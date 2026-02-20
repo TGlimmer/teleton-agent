@@ -3,6 +3,10 @@ import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { appendFileSync, readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { WORKSPACE_PATHS } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 const MEMORY_DIR = WORKSPACE_PATHS.MEMORY_DIR;
 const MEMORY_FILE = WORKSPACE_PATHS.MEMORY;
@@ -124,7 +128,7 @@ export const memoryWriteExecutor: ToolExecutor<MemoryWriteParams> = async (
       }
       appendFileSync(MEMORY_FILE, entry, "utf-8");
 
-      console.log(`📝 Memory written to MEMORY.md${section ? ` (section: ${section})` : ""}`);
+      log.info(`📝 Memory written to MEMORY.md${section ? ` (section: ${section})` : ""}`);
 
       // Check memory size and warn if approaching limit
       const lineCount = getMemoryLineCount();
@@ -162,7 +166,7 @@ export const memoryWriteExecutor: ToolExecutor<MemoryWriteParams> = async (
 
       appendFileSync(logPath, entry, "utf-8");
 
-      console.log(`📅 Memory written to daily log${section ? ` (${section})` : ""}`);
+      log.info(`📅 Memory written to daily log${section ? ` (${section})` : ""}`);
 
       return {
         success: true,
@@ -175,10 +179,10 @@ export const memoryWriteExecutor: ToolExecutor<MemoryWriteParams> = async (
       };
     }
   } catch (error) {
-    console.error("Error writing to memory:", error);
+    log.error({ err: error }, "Error writing to memory");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -8,6 +8,10 @@ import {
   WorkspaceSecurityError,
   WORKSPACE_PATHS,
 } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_download_media tool
@@ -96,15 +100,20 @@ export const telegramDownloadMediaExecutor: ToolExecutor<DownloadMediaParams> = 
       extension = ".mp4";
       mediaType = "video_note";
     } else if (message.sticker) {
-      const sticker = message.sticker as any;
-      extension = sticker.isAnimated ? ".tgs" : ".webp";
+      const stickerDoc = message.sticker;
+      extension =
+        stickerDoc?.mimeType === "application/x-tgsticker"
+          ? ".tgs"
+          : stickerDoc?.mimeType === "video/webm"
+            ? ".webm"
+            : ".webp";
       mediaType = "sticker";
     } else if (message.document) {
       // Try to get original filename
-      const doc = message.document as any;
+      const doc = message.document as Api.Document;
       if (doc.attributes) {
         for (const attr of doc.attributes) {
-          if (attr.fileName) {
+          if ((attr as Api.DocumentAttributeFilename).fileName) {
             extension = "";
             break;
           }
@@ -193,10 +202,10 @@ export const telegramDownloadMediaExecutor: ToolExecutor<DownloadMediaParams> = 
       },
     };
   } catch (error) {
-    console.error("Error downloading media:", error);
+    log.error({ err: error }, "Error downloading media");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

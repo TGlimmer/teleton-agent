@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_get_chat_info tool
@@ -55,7 +59,7 @@ export const telegramGetChatInfoExecutor: ToolExecutor<GetChatInfoParams> = asyn
     const isUser = entity.className === "User";
 
     let chatInfo: Record<string, unknown> = {
-      id: (entity as any).id?.toString() || chatId,
+      id: entity.id?.toString() || chatId,
       type: isChannel ? "channel" : isChat ? "group" : isUser ? "user" : "unknown",
     };
 
@@ -121,11 +125,15 @@ export const telegramGetChatInfoExecutor: ToolExecutor<GetChatInfoParams> = asyn
         }
       } catch (error) {
         // If we can't get full info, return basic info
-        const basicEntity = entity as Api.Channel | Api.Chat;
         chatInfo = {
           ...chatInfo,
-          title: (basicEntity as any).title || null,
-          username: (basicEntity as any).username || null,
+          title:
+            entity instanceof Api.Channel
+              ? entity.title
+              : entity instanceof Api.Chat
+                ? entity.title
+                : null,
+          username: entity instanceof Api.Channel ? entity.username : null,
           note: "Could not fetch full chat info (may lack permissions)",
         };
       }
@@ -136,10 +144,10 @@ export const telegramGetChatInfoExecutor: ToolExecutor<GetChatInfoParams> = asyn
       data: chatInfo,
     };
   } catch (error) {
-    console.error("Error getting chat info:", error);
+    log.error({ err: error }, "Error getting chat info");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

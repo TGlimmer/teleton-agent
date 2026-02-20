@@ -17,6 +17,9 @@ import { verifyPayment } from "../../ton/payment-verifier.js";
 import { getWalletAddress } from "../../ton/wallet-service.js";
 import { executeDeal } from "../../deals/executor.js";
 import { DEALS_CONFIG } from "../../deals/config.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Poller");
 
 interface PollerConfig {
   pollIntervalMs: number;
@@ -49,18 +52,18 @@ export class VerificationPoller {
    */
   start(): void {
     if (this.intervalId) {
-      console.warn("⚠️ [Poller] Already running");
+      log.warn("⚠️ [Poller] Already running");
       return;
     }
 
-    console.log(`🔄 [Poller] Started (interval: ${this.config.pollIntervalMs}ms)`);
+    log.info(`🔄 [Poller] Started (interval: ${this.config.pollIntervalMs}ms)`);
 
     this.intervalId = setInterval(() => {
-      this.poll().catch((err) => console.error("❌ [Poller] Unhandled poll error:", err));
+      this.poll().catch((err) => log.error({ err }, "[Poller] Unhandled poll error"));
     }, this.config.pollIntervalMs);
 
     // Run immediately
-    this.poll().catch((err) => console.error("❌ [Poller] Initial poll error:", err));
+    this.poll().catch((err) => log.error({ err }, "[Poller] Initial poll error"));
   }
 
   /**
@@ -70,7 +73,7 @@ export class VerificationPoller {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log("🛑 [Poller] Stopped");
+      log.info("🛑 [Poller] Stopped");
     }
   }
 
@@ -86,12 +89,12 @@ export class VerificationPoller {
       for (const deal of deals) {
         const retryCount = this.retryMap.get(deal.dealId) || 0;
         if (retryCount === 0) {
-          console.log(`🔍 [Poller] Verifying deal ${deal.dealId}...`);
+          log.info(`🔍 [Poller] Verifying deal ${deal.dealId}...`);
         }
         await this.verifyDeal(deal);
       }
     } catch (error) {
-      console.error("❌ [Poller] Error during poll:", error);
+      log.error({ err: error }, "[Poller] Error during poll");
     }
   }
 
@@ -103,9 +106,7 @@ export class VerificationPoller {
 
     // Check max retries
     if (retryCount >= this.config.maxRetries) {
-      console.log(
-        `⏰ [Poller] Deal ${deal.dealId} verification timeout after ${retryCount} retries`
-      );
+      log.info(`⏰ [Poller] Deal ${deal.dealId} verification timeout after ${retryCount} retries`);
       await this.handleTimeout(deal);
       return;
     }
@@ -138,7 +139,7 @@ export class VerificationPoller {
         this.retryMap.set(deal.dealId, retryCount + 1);
       }
     } catch (error) {
-      console.error(`❌ [Poller] Error verifying deal ${deal.dealId}:`, error);
+      log.error({ err: error }, `[Poller] Error verifying deal ${deal.dealId}`);
       this.retryMap.set(deal.dealId, retryCount + 1);
     }
   }
@@ -225,7 +226,7 @@ export class VerificationPoller {
 
       return { verified: false };
     } catch (error) {
-      console.error(`❌ [Poller] Gift verification error for deal ${deal.dealId}:`, error);
+      log.error({ err: error }, `[Poller] Gift verification error for deal ${deal.dealId}`);
       return { verified: false };
     }
   }
@@ -239,7 +240,7 @@ export class VerificationPoller {
     playerWallet?: string,
     giftMsgId?: string
   ): Promise<void> {
-    console.log(`✅ [Poller] Deal ${deal.dealId} payment verified!`);
+    log.info(`✅ [Poller] Deal ${deal.dealId} payment verified!`);
 
     // Update deal status to 'verified' (atomic: only if still payment_claimed)
     let transitioned: boolean;
@@ -270,9 +271,7 @@ export class VerificationPoller {
 
     // Another poller already transitioned this deal — abort
     if (!transitioned) {
-      console.warn(
-        `⚠️ [Poller] Deal ${deal.dealId} already transitioned by another poller, skipping`
-      );
+      log.warn(`⚠️ [Poller] Deal ${deal.dealId} already transitioned by another poller, skipping`);
       return;
     }
 
@@ -298,7 +297,7 @@ export class VerificationPoller {
         await this.bot.editMessageByInlineId(deal.inlineMessageId, text, buttons);
       }
 
-      console.log(`🎉 [Poller] Deal ${deal.dealId} completed successfully!`);
+      log.info(`🎉 [Poller] Deal ${deal.dealId} completed successfully!`);
     } else {
       // Deal failed
       if (deal.inlineMessageId) {
@@ -306,7 +305,7 @@ export class VerificationPoller {
         await this.bot.editMessageByInlineId(deal.inlineMessageId, text, buttons);
       }
 
-      console.error(`❌ [Poller] Deal ${deal.dealId} execution failed:`, result.error);
+      log.error(`[Poller] Deal ${deal.dealId} execution failed: ${result.error}`);
     }
   }
 

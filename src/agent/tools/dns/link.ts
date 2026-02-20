@@ -5,6 +5,10 @@ import { WalletContractV5R1, TonClient, toNano, internal, beginCell } from "@ton
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 // Op code for change_dns_record
 const DNS_CHANGE_RECORD_OP = 0x4eb1f0f9;
@@ -172,10 +176,10 @@ export const dnsLinkExecutor: ToolExecutor<DnsLinkParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in dns_link:", error);
+    log.error({ err: error }, "Error in dns_link");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

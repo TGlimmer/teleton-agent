@@ -1,3 +1,7 @@
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
+
 const DEFAULT_MAX_WAIT_SECONDS = 120;
 const DEFAULT_MAX_RETRIES = 2;
 
@@ -26,9 +30,7 @@ export async function withFloodRetry<T>(
 
       if (attempt >= maxRetries) break;
 
-      console.warn(
-        `⏳ [FLOOD_WAIT] Waiting ${waitSeconds}s before retry ${attempt + 1}/${maxRetries}`
-      );
+      log.warn(`[FLOOD_WAIT] Waiting ${waitSeconds}s before retry ${attempt + 1}/${maxRetries}`);
       await new Promise((r) => setTimeout(r, waitSeconds * 1000));
     }
   }

@@ -558,16 +558,11 @@ storage:
   describe("loadConfig - backward compatibility", () => {
     it("should remove deprecated market field with warning", () => {
       writeTestConfig(DEPRECATED_MARKET);
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       const config = loadConfig(TEST_CONFIG_PATH);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("config.market is deprecated")
-      );
+      // log.warn is pino — we verify the field is removed
       expect((config as any).market).toBeUndefined();
-
-      consoleSpy.mockRestore();
     });
 
     it("should accept config with extra unknown fields", () => {

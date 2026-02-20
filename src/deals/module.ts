@@ -1,8 +1,10 @@
 import type { PluginModule } from "../agent/tools/types.js";
 import { initDealsConfig, DEALS_CONFIG } from "./config.js";
 import { DealBot, VerificationPoller } from "../bot/index.js";
-import { verbose } from "../utils/logger.js";
+import { createLogger } from "../utils/logger.js";
 import { openDealsDb, closeDealsDb, getDealsDb } from "./db.js";
+
+const log = createLogger("Deal");
 import { createDbWrapper } from "../utils/module-db.js";
 import { DEAL_VERIFICATION_WINDOW_SECONDS } from "../constants/limits.js";
 import {
@@ -82,12 +84,12 @@ const dealsModule: PluginModule = {
         });
         verificationPoller.start();
 
-        console.log(`✅ Deal Bot: @${botUsername} connected`);
+        log.info(`Deal Bot: @${botUsername} connected`);
       } catch (botError) {
-        console.warn(`⚠️ Deal Bot failed to start: ${botError}`);
+        log.warn(`Deal Bot failed to start: ${botError}`);
       }
     } else {
-      console.log(`⚠️ Deal Bot: not configured (set bot_token in config)`);
+      log.warn(`Deal Bot: not configured (set bot_token in config)`);
     }
 
     // Expire stale deals
@@ -100,7 +102,7 @@ const dealsModule: PluginModule = {
           `UPDATE deals SET status = 'expired' WHERE status IN ('proposed', 'accepted') AND expires_at < ?`
         )
         .run(now);
-      if (r.changes > 0) verbose(`⏰ Expired ${r.changes} stale deal(s)`);
+      if (r.changes > 0) log.debug(`Expired ${r.changes} stale deal(s)`);
     }, DEALS_CONFIG.expiryCheckIntervalMs);
   },
 

@@ -1,6 +1,9 @@
 import { TelegramUserClient, type TelegramClientConfig } from "./client.js";
 import { Api } from "telegram";
 import type { NewMessageEvent } from "telegram/events/NewMessage.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 export interface TelegramMessage {
   id: number;
@@ -53,7 +56,7 @@ export class TelegramBridge {
     try {
       await this.getDialogs();
     } catch (error) {
-      console.warn("⚠️ Could not load dialogs:", error);
+      log.warn({ err: error }, "Could not load dialogs");
     }
   }
 
@@ -83,7 +86,7 @@ export class TelegramBridge {
         .filter((r): r is PromiseFulfilledResult<TelegramMessage> => r.status === "fulfilled")
         .map((r) => r.value);
     } catch (error) {
-      console.error("Error getting messages:", error);
+      log.error({ err: error }, "Error getting messages");
       return [];
     }
   }
@@ -123,7 +126,7 @@ export class TelegramBridge {
         replyTo: options.replyToId,
       });
     } catch (error) {
-      console.error("Error sending message:", error);
+      log.error({ err: error }, "Error sending message");
       throw error;
     }
   }
@@ -156,7 +159,7 @@ export class TelegramBridge {
       }
 
       const gramJsClient = this.client.getClient();
-      const result: any = await gramJsClient.invoke(
+      const result = await gramJsClient.invoke(
         new Api.messages.EditMessage({
           peer,
           id: options.messageId,
@@ -165,19 +168,18 @@ export class TelegramBridge {
         })
       );
 
-      if (result.className === "Updates" && result.updates) {
+      if (result instanceof Api.Updates) {
         const messageUpdate = result.updates.find(
-          (u: any) =>
-            u.className === "UpdateEditMessage" || u.className === "UpdateEditChannelMessage"
+          (u) => u.className === "UpdateEditMessage" || u.className === "UpdateEditChannelMessage"
         );
-        if (messageUpdate?.message) {
-          return messageUpdate.message;
+        if (messageUpdate && "message" in messageUpdate) {
+          return messageUpdate.message as Api.Message;
         }
       }
 
-      return result;
+      return result as unknown as Api.Message;
     } catch (error) {
-      console.error("Error editing message:", error);
+      log.error({ err: error }, "Error editing message");
       throw error;
     }
   }
@@ -199,7 +201,7 @@ export class TelegramBridge {
         isChannel: d.isChannel,
       }));
     } catch (error) {
-      console.error("Error getting dialogs:", error);
+      log.error({ err: error }, "Error getting dialogs");
       return [];
     }
   }
@@ -208,7 +210,7 @@ export class TelegramBridge {
     try {
       await this.client.setTyping(chatId);
     } catch (error) {
-      console.error("Error setting typing:", error);
+      log.error({ err: error }, "Error setting typing");
     }
   }
 
@@ -228,7 +230,7 @@ export class TelegramBridge {
         })
       );
     } catch (error) {
-      console.error("Error sending reaction:", error);
+      log.error({ err: error }, "Error sending reaction");
       throw error;
     }
   }
@@ -289,8 +291,8 @@ export class TelegramBridge {
       if (sender && "firstName" in sender) {
         senderFirstName = sender.firstName ?? undefined;
       }
-      if (sender && "bot" in sender) {
-        isBot = (sender as any).bot ?? false;
+      if (sender instanceof Api.User) {
+        isBot = sender.bot ?? false;
       }
     } catch (e) {
       // getSender() can fail on deleted accounts, timeouts, etc.

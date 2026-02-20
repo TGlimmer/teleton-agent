@@ -4,6 +4,10 @@ import { Address } from "@ton/core";
 import { getCachedHttpEndpoint } from "./endpoint.js";
 import { withBlockchainRetry } from "../utils/retry.js";
 import { PAYMENT_TOLERANCE_RATIO } from "../constants/limits.js";
+import { getErrorMessage } from "../utils/errors.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("TON");
 
 const DEFAULT_MAX_PAYMENT_AGE_MINUTES = 10;
 
@@ -105,7 +109,7 @@ export async function verifyPayment(
         )
         .run(txHash, userId, tonAmount, gameType);
 
-      if ((insertResult as any).changes === 0) {
+      if (insertResult.changes === 0) {
         continue;
       }
 
@@ -133,10 +137,10 @@ export async function verifyPayment(
 If you already sent, wait a moment and try again.`,
     };
   } catch (error) {
-    console.error("Error verifying payment:", error);
+    log.error({ err: error }, "Error verifying payment");
     return {
       verified: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 }

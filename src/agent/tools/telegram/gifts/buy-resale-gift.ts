@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for buying a resale gift
@@ -74,9 +78,9 @@ export const telegramBuyResaleGiftExecutor: ToolExecutor<BuyResaleGiftParams> = 
       },
     };
   } catch (error) {
-    console.error("Error buying resale gift:", error);
+    log.error({ err: error }, "Error buying resale gift");
 
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     if (errorMsg.includes("BALANCE_TOO_LOW")) {
       return {
         success: false,

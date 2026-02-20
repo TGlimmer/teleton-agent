@@ -5,6 +5,7 @@ import { tavily } from "@tavily/core";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { WEB_FETCH_MAX_TEXT_LENGTH } from "../../../constants/limits.js";
 import { sanitizeForContext } from "../../../utils/sanitize.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 interface WebFetchParams {
   url: string;
@@ -101,7 +102,7 @@ export const webFetchExecutor: ToolExecutor<WebFetchParams> = async (
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

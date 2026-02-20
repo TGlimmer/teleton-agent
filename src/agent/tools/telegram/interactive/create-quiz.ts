@@ -1,7 +1,11 @@
-import { randomBytes } from "crypto";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_create_quiz tool
@@ -99,7 +103,7 @@ export const telegramCreateQuizExecutor: ToolExecutor<CreateQuizParams> = async 
 
     // Create quiz poll with correct answer
     const poll = new Api.Poll({
-      id: randomBytes(8).readBigUInt64BE() as any,
+      id: randomLong(),
       question: new Api.TextWithEntities({ text: question, entities: [] }),
       answers: options.map(
         (opt, idx) =>
@@ -125,7 +129,7 @@ export const telegramCreateQuizExecutor: ToolExecutor<CreateQuizParams> = async 
           solutionEntities: [],
         }),
         message: "",
-        randomId: randomBytes(8).readBigUInt64BE() as any,
+        randomId: randomLong(),
       })
     );
 
@@ -139,10 +143,10 @@ export const telegramCreateQuizExecutor: ToolExecutor<CreateQuizParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error creating quiz:", error);
+    log.error({ err: error }, "Error creating quiz");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

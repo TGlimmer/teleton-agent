@@ -5,6 +5,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface KickUserParams {
   chat_id: string;
@@ -82,10 +86,10 @@ export const telegramKickUserExecutor: ToolExecutor<KickUserParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in telegram_kick_user:", error);
+    log.error({ err: error }, "Error in telegram_kick_user");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };
@@ -171,7 +175,7 @@ export const telegramBanUserExecutor: ToolExecutor<BanUserParams> = async (
         );
       } catch (e) {
         // Ignore if deletion fails (might not have permission)
-        console.warn("Could not delete user messages:", e);
+        log.warn({ err: e }, "Could not delete user messages");
       }
     }
 
@@ -189,10 +193,10 @@ export const telegramBanUserExecutor: ToolExecutor<BanUserParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in telegram_ban_user:", error);
+    log.error({ err: error }, "Error in telegram_ban_user");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };
@@ -254,10 +258,10 @@ export const telegramUnbanUserExecutor: ToolExecutor<UnbanUserParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in telegram_unban_user:", error);
+    log.error({ err: error }, "Error in telegram_unban_user");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

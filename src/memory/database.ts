@@ -2,6 +2,9 @@ import Database from "better-sqlite3";
 import { existsSync, mkdirSync, chmodSync } from "fs";
 import { dirname } from "path";
 import * as sqliteVec from "sqlite-vec";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Memory");
 import {
   ensureSchema,
   ensureVectorTables,
@@ -33,7 +36,7 @@ export class MemoryDatabase {
     }
 
     this.db = new Database(config.path, {
-      verbose: process.env.DEBUG_SQL ? console.log : undefined,
+      verbose: process.env.DEBUG_SQL ? (msg: unknown) => log.debug(String(msg)) : undefined,
     });
     try {
       chmodSync(config.path, 0o600);
@@ -79,19 +82,17 @@ export class MemoryDatabase {
       ensureVectorTables(this.db, dims);
       this.vectorReady = true;
     } catch (error) {
-      console.warn(
-        `⚠️  sqlite-vec not available, vector search disabled: ${(error as Error).message}`
-      );
-      console.warn("   Falling back to keyword-only search");
+      log.warn(`sqlite-vec not available, vector search disabled: ${(error as Error).message}`);
+      log.warn("Falling back to keyword-only search");
       this.config.enableVectorSearch = false;
     }
   }
 
   private migrate(from: string, to: string): void {
-    console.log(`Migrating database from ${from} to ${to}...`);
+    log.info(`Migrating database from ${from} to ${to}...`);
     runMigrations(this.db);
     ensureSchema(this.db);
-    console.log("Migration complete");
+    log.info("Migration complete");
   }
 
   getDb(): Database.Database {

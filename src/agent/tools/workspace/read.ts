@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 import { readFileSync, lstatSync } from "fs";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { validateReadPath, WorkspaceSecurityError } from "../../../workspace/index.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 interface WorkspaceReadParams {
   path: string;
@@ -123,7 +124,7 @@ export const workspaceReadExecutor: ToolExecutor<WorkspaceReadParams> = async (
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

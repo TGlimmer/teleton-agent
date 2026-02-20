@@ -1,4 +1,7 @@
 import { fetchWithTimeout } from "../../../utils/fetch.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 const ASSET_LIST_URL = "https://assets.dedust.io/list.json";
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -37,7 +40,7 @@ export async function getAssetList(): Promise<DedustAsset[]> {
   } catch (error) {
     // Stale-while-revalidate: return old cache if available
     if (cachedAssets.length > 0) {
-      console.warn("Asset list fetch failed, using stale cache:", error);
+      log.warn({ err: error }, "Asset list fetch failed, using stale cache");
       return cachedAssets;
     }
     throw error;

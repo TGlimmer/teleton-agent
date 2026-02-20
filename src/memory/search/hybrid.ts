@@ -1,6 +1,9 @@
 import type Database from "better-sqlite3";
 import { serializeEmbedding } from "../embeddings/index.js";
 import { HYBRID_SEARCH_MIN_SCORE } from "../../constants/limits.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Memory");
 
 export interface HybridSearchResult {
   id: string;
@@ -108,7 +111,7 @@ export class HybridSearch {
         vectorScore: 1 - row.distance,
       }));
     } catch (error) {
-      console.error("Vector search error (knowledge):", error);
+      log.error({ err: error }, "Vector search error (knowledge)");
       return [];
     }
   }
@@ -141,7 +144,7 @@ export class HybridSearch {
         keywordScore: this.bm25ToScore(row.score),
       }));
     } catch (error) {
-      console.error("FTS5 search error (knowledge):", error);
+      log.error({ err: error }, "FTS5 search error (knowledge)");
       return [];
     }
   }
@@ -199,7 +202,7 @@ export class HybridSearch {
         vectorScore: 1 - row.distance,
       }));
     } catch (error) {
-      console.error("Vector search error (messages):", error);
+      log.error({ err: error }, "Vector search error (messages)");
       return [];
     }
   }
@@ -251,7 +254,7 @@ export class HybridSearch {
         keywordScore: this.bm25ToScore(row.score),
       }));
     } catch (error) {
-      console.error("FTS5 search error (messages):", error);
+      log.error({ err: error }, "FTS5 search error (messages)");
       return [];
     }
   }

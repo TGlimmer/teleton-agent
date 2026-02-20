@@ -6,6 +6,54 @@ import type Database from "better-sqlite3";
 import type { DealContext, DealStatus } from "../types.js";
 import { DEAL_VERIFICATION_WINDOW_SECONDS } from "../../constants/limits.js";
 
+interface DealRow {
+  id: string;
+  user_telegram_id: number;
+  user_username: string | null;
+  chat_id: string;
+  user_gives_type: string;
+  user_gives_ton_amount: number | null;
+  user_gives_gift_slug: string | null;
+  user_gives_value_ton: number | null;
+  agent_gives_type: string;
+  agent_gives_ton_amount: number | null;
+  agent_gives_gift_slug: string | null;
+  agent_gives_value_ton: number | null;
+  profit_ton: number | null;
+  status: string;
+  created_at: number;
+  expires_at: number;
+  inline_message_id: string | null;
+  payment_claimed_at: number | null;
+  user_payment_verified_at: number | null;
+  completed_at: number | null;
+}
+
+function rowToDeal(row: DealRow): DealContext {
+  return {
+    dealId: row.id,
+    userId: row.user_telegram_id,
+    username: row.user_username ?? undefined,
+    chatId: row.chat_id,
+    userGivesType: row.user_gives_type as DealContext["userGivesType"],
+    userGivesTonAmount: row.user_gives_ton_amount ?? undefined,
+    userGivesGiftSlug: row.user_gives_gift_slug ?? undefined,
+    userGivesValueTon: row.user_gives_value_ton ?? 0,
+    agentGivesType: row.agent_gives_type as DealContext["agentGivesType"],
+    agentGivesTonAmount: row.agent_gives_ton_amount ?? undefined,
+    agentGivesGiftSlug: row.agent_gives_gift_slug ?? undefined,
+    agentGivesValueTon: row.agent_gives_value_ton ?? 0,
+    profitTon: row.profit_ton ?? 0,
+    status: row.status as DealStatus,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    inlineMessageId: row.inline_message_id ?? undefined,
+    paymentClaimedAt: row.payment_claimed_at ?? undefined,
+    verifiedAt: row.user_payment_verified_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+  };
+}
+
 /**
  * Get deal by ID
  */
@@ -20,32 +68,11 @@ export function getDeal(db: Database.Database, dealId: string): DealContext | nu
         inline_message_id, payment_claimed_at, user_payment_verified_at, completed_at
       FROM deals WHERE id = ?`
     )
-    .get(dealId) as any;
+    .get(dealId) as DealRow | undefined;
 
   if (!row) return null;
 
-  return {
-    dealId: row.id,
-    userId: row.user_telegram_id,
-    username: row.user_username,
-    chatId: row.chat_id,
-    userGivesType: row.user_gives_type,
-    userGivesTonAmount: row.user_gives_ton_amount,
-    userGivesGiftSlug: row.user_gives_gift_slug,
-    userGivesValueTon: row.user_gives_value_ton,
-    agentGivesType: row.agent_gives_type,
-    agentGivesTonAmount: row.agent_gives_ton_amount,
-    agentGivesGiftSlug: row.agent_gives_gift_slug,
-    agentGivesValueTon: row.agent_gives_value_ton,
-    profitTon: row.profit_ton,
-    status: row.status as DealStatus,
-    createdAt: row.created_at,
-    expiresAt: row.expires_at,
-    inlineMessageId: row.inline_message_id,
-    paymentClaimedAt: row.payment_claimed_at,
-    verifiedAt: row.user_payment_verified_at,
-    completedAt: row.completed_at,
-  };
+  return rowToDeal(row);
 }
 
 /**
@@ -138,30 +165,9 @@ export function getDealsAwaitingVerification(db: Database.Database): DealContext
       ORDER BY payment_claimed_at ASC
       LIMIT 10`
     )
-    .all() as any[];
+    .all() as DealRow[];
 
-  return rows.map((row) => ({
-    dealId: row.id,
-    userId: row.user_telegram_id,
-    username: row.user_username,
-    chatId: row.chat_id,
-    userGivesType: row.user_gives_type,
-    userGivesTonAmount: row.user_gives_ton_amount,
-    userGivesGiftSlug: row.user_gives_gift_slug,
-    userGivesValueTon: row.user_gives_value_ton,
-    agentGivesType: row.agent_gives_type,
-    agentGivesTonAmount: row.agent_gives_ton_amount,
-    agentGivesGiftSlug: row.agent_gives_gift_slug,
-    agentGivesValueTon: row.agent_gives_value_ton,
-    profitTon: row.profit_ton,
-    status: row.status as DealStatus,
-    createdAt: row.created_at,
-    expiresAt: row.expires_at,
-    inlineMessageId: row.inline_message_id,
-    paymentClaimedAt: row.payment_claimed_at,
-    verifiedAt: row.user_payment_verified_at,
-    completedAt: row.completed_at,
-  }));
+  return rows.map(rowToDeal);
 }
 
 /**
@@ -181,30 +187,9 @@ export function getDealsAwaitingExecution(db: Database.Database): DealContext[] 
       ORDER BY user_payment_verified_at ASC
       LIMIT 10`
     )
-    .all() as any[];
+    .all() as DealRow[];
 
-  return rows.map((row) => ({
-    dealId: row.id,
-    userId: row.user_telegram_id,
-    username: row.user_username,
-    chatId: row.chat_id,
-    userGivesType: row.user_gives_type,
-    userGivesTonAmount: row.user_gives_ton_amount,
-    userGivesGiftSlug: row.user_gives_gift_slug,
-    userGivesValueTon: row.user_gives_value_ton,
-    agentGivesType: row.agent_gives_type,
-    agentGivesTonAmount: row.agent_gives_ton_amount,
-    agentGivesGiftSlug: row.agent_gives_gift_slug,
-    agentGivesValueTon: row.agent_gives_value_ton,
-    profitTon: row.profit_ton,
-    status: row.status as DealStatus,
-    createdAt: row.created_at,
-    expiresAt: row.expires_at,
-    inlineMessageId: row.inline_message_id,
-    paymentClaimedAt: row.payment_claimed_at,
-    verifiedAt: row.user_payment_verified_at,
-    completedAt: row.completed_at,
-  }));
+  return rows.map(rowToDeal);
 }
 
 /**

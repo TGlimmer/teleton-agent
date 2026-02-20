@@ -1,6 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { toLong } from "../../../../utils/gramjs-bigint.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_get_participants tool
@@ -80,17 +85,22 @@ export const telegramGetParticipantsExecutor: ToolExecutor<GetParticipantsParams
         filter: participantFilter,
         offset: 0,
         limit,
-        hash: 0 as any,
+        hash: toLong(0),
       })
     );
 
     // Parse participants
-    const resultData = result as any;
-    const participants = resultData.participants.map((p: any) => {
-      const user = resultData.users.find((u: any) => u.id?.toString() === p.userId?.toString());
+    const resultData = result as Api.channels.ChannelParticipants;
+    const participants = resultData.participants.map((p) => {
+      const participantUserId = "userId" in p ? p.userId : undefined;
+      const user = participantUserId
+        ? (resultData.users.find((u) => u.id?.toString() === participantUserId?.toString()) as
+            | Api.User
+            | undefined)
+        : undefined;
 
       return {
-        userId: p.userId?.toString(),
+        userId: participantUserId?.toString(),
         username: user?.username || null,
         firstName: user?.firstName || null,
         lastName: user?.lastName || null,
@@ -113,10 +123,10 @@ export const telegramGetParticipantsExecutor: ToolExecutor<GetParticipantsParams
       },
     };
   } catch (error) {
-    console.error("Error getting Telegram participants:", error);
+    log.error({ err: error }, "Error getting Telegram participants");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

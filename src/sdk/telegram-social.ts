@@ -1,4 +1,5 @@
 import type { TelegramBridge } from "../telegram/bridge.js";
+import type { Api } from "telegram";
 import type {
   PluginLogger,
   ChatInfo,
@@ -9,7 +10,7 @@ import type {
   ReceivedGift,
 } from "@teleton-agent/sdk";
 import { PluginSDKError } from "@teleton-agent/sdk";
-import { randomBytes } from "crypto";
+import { randomLong, toLong } from "../utils/gramjs-bigint.js";
 
 export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogger) {
   function requireBridge(): void {
@@ -46,7 +47,7 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         const isUser = entity.className === "User";
 
         if (isUser) {
-          const user = entity as any;
+          const user = entity as Api.User;
           return {
             id: user.id?.toString() || chatId,
             title: [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown",
@@ -56,15 +57,13 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         }
 
         if (isChannel) {
-          const channel = entity as any;
+          const channel = entity as Api.Channel;
           let description: string | undefined;
           let membersCount: number | undefined;
 
           try {
-            const fullChannel = await client.invoke(
-              new Api.channels.GetFullChannel({ channel: entity as any })
-            );
-            const fullChat = fullChannel.fullChat as any;
+            const fullChannel = await client.invoke(new Api.channels.GetFullChannel({ channel }));
+            const fullChat = fullChannel.fullChat as Api.ChannelFull;
             description = fullChat.about || undefined;
             membersCount = fullChat.participantsCount || undefined;
           } catch {
@@ -83,14 +82,14 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         }
 
         if (isChat) {
-          const chat = entity as any;
+          const chat = entity as Api.Chat;
           let description: string | undefined;
 
           try {
             const fullChatResult = await client.invoke(
               new Api.messages.GetFullChat({ chatId: chat.id })
             );
-            const fullChat = fullChatResult.fullChat as any;
+            const fullChat = fullChatResult.fullChat as Api.ChatFull;
             description = fullChat.about || undefined;
           } catch {
             // May lack permissions
@@ -129,7 +128,7 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
 
         if (entity.className !== "User") return null;
 
-        const user = entity as any;
+        const user = entity as Api.User;
         return {
           id: Number(user.id),
           firstName: user.firstName || "",
@@ -171,23 +170,28 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         }
 
         if (result.users && result.users.length > 0) {
-          const user = result.users[0] as any;
-          return {
-            id: Number(user.id),
-            type: "user",
-            username: user.username || undefined,
-            title: user.firstName || undefined,
-          };
+          const user = result.users[0];
+          if (user instanceof Api.User) {
+            return {
+              id: Number(user.id),
+              type: "user",
+              username: user.username || undefined,
+              title: user.firstName || undefined,
+            };
+          }
         }
 
         if (result.chats && result.chats.length > 0) {
-          const chat = result.chats[0] as any;
+          const chat = result.chats[0];
           const type = chat.className === "Channel" ? "channel" : "chat";
           return {
             id: Number(chat.id),
             type,
-            username: chat.username || undefined,
-            title: chat.title || undefined,
+            username: chat instanceof Api.Channel ? chat.username || undefined : undefined,
+            title:
+              chat instanceof Api.Channel || chat instanceof Api.Chat
+                ? chat.title || undefined
+                : undefined,
           };
         }
 
@@ -215,18 +219,21 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
             filter: new Api.ChannelParticipantsRecent(),
             offset: 0,
             limit: limit ?? 100,
-            hash: 0 as any,
+            hash: toLong(0),
           })
         );
 
-        const resultData = result as any;
-        return (resultData.users || []).map((user: any) => ({
-          id: Number(user.id),
-          firstName: user.firstName || "",
-          lastName: user.lastName || undefined,
-          username: user.username || undefined,
-          isBot: user.bot || false,
-        }));
+        const resultData = result as Api.channels.ChannelParticipants;
+        return (resultData.users || []).map((user) => {
+          const u = user as Api.User;
+          return {
+            id: Number(u.id),
+            firstName: u.firstName || "",
+            lastName: u.lastName || undefined,
+            username: u.username || undefined,
+            isBot: u.bot || false,
+          };
+        });
       } catch (err) {
         if (err instanceof PluginSDKError) throw err;
         log.error("telegram.getParticipants() failed:", err);
@@ -257,7 +264,7 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         const multipleChoice = opts?.multipleChoice ?? false;
 
         const poll = new Api.Poll({
-          id: randomBytes(8).readBigUInt64BE() as any,
+          id: randomLong(),
           question: new Api.TextWithEntities({ text: question, entities: [] }),
           answers: answers.map(
             (opt, idx) =>
@@ -270,18 +277,18 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
           multipleChoice,
         });
 
-        const result: any = await client.invoke(
+        const result = await client.invoke(
           new Api.messages.SendMedia({
             peer: chatId,
             media: new Api.InputMediaPoll({ poll }),
             message: "",
-            randomId: randomBytes(8).readBigUInt64BE() as any,
+            randomId: randomLong(),
           })
         );
 
         // Extract message ID from updates
-        if (result.className === "Updates" || result.className === "UpdatesCombined") {
-          for (const update of (result as any).updates) {
+        if (result instanceof Api.Updates || result instanceof Api.UpdatesCombined) {
+          for (const update of result.updates) {
             if (
               update.className === "UpdateNewMessage" ||
               update.className === "UpdateNewChannelMessage"
@@ -326,7 +333,7 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         const { Api } = await import("telegram");
 
         const poll = new Api.Poll({
-          id: randomBytes(8).readBigUInt64BE() as any,
+          id: randomLong(),
           question: new Api.TextWithEntities({ text: question, entities: [] }),
           answers: answers.map(
             (opt, idx) =>
@@ -340,7 +347,7 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
           multipleChoice: false,
         });
 
-        const result: any = await client.invoke(
+        const result = await client.invoke(
           new Api.messages.SendMedia({
             peer: chatId,
             media: new Api.InputMediaPoll({
@@ -350,12 +357,12 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
               solutionEntities: [],
             }),
             message: "",
-            randomId: randomBytes(8).readBigUInt64BE() as any,
+            randomId: randomLong(),
           })
         );
 
-        if (result.className === "Updates" || result.className === "UpdatesCombined") {
-          for (const update of (result as any).updates) {
+        if (result instanceof Api.Updates || result instanceof Api.UpdatesCombined) {
+          for (const update of result.updates) {
             if (
               update.className === "UpdateNewMessage" ||
               update.className === "UpdateNewChannelMessage"
@@ -719,7 +726,11 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
           })
         );
 
-        return (result as any).id || 0;
+        const storyUpdate =
+          result instanceof Api.Updates
+            ? result.updates.find((u) => u.className === "UpdateStory")
+            : undefined;
+        return storyUpdate?.story?.id ?? 0;
       } catch (err) {
         if (err instanceof PluginSDKError) throw err;
         throw new PluginSDKError(

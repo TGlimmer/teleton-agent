@@ -5,6 +5,10 @@ import { WalletContractV5R1, TonClient, toNano, internal } from "@ton/ton";
 import { Address, SendMode, beginCell } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 // Jetton transfer op code (TEP-74)
 const JETTON_TRANSFER_OP = 0xf8a7ea5;
@@ -168,10 +172,10 @@ export const jettonSendExecutor: ToolExecutor<JettonSendParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in jetton_send:", error);
+    log.error({ err: error }, "Error in jetton_send");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

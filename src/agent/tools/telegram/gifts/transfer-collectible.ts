@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { hasVerifiedDeal } from "../../../../deals/module.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for transferring a collectible
@@ -93,7 +97,7 @@ export const telegramTransferCollectibleExecutor: ToolExecutor<TransferCollectib
     } catch (freeTransferError: any) {
       // If PAYMENT_REQUIRED, the transfer requires Stars - use payment flow
       if (freeTransferError?.errorMessage === "PAYMENT_REQUIRED") {
-        console.log("Transfer requires payment, using payment flow...");
+        log.info("Transfer requires payment, using payment flow...");
 
         // Create invoice for paid transfer
         const invoice = new Api.InputInvoiceStarGiftTransfer({
@@ -135,9 +139,9 @@ export const telegramTransferCollectibleExecutor: ToolExecutor<TransferCollectib
       throw freeTransferError;
     }
   } catch (error) {
-    console.error("Error transferring collectible:", error);
+    log.error({ err: error }, "Error transferring collectible");
 
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
 
     if (errorMsg.includes("STARGIFT_NOT_FOUND")) {
       return {

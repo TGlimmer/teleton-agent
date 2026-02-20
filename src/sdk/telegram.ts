@@ -1,5 +1,6 @@
 import type { TelegramBridge } from "../telegram/bridge.js";
-import { randomBytes } from "crypto";
+import { Api } from "telegram";
+import { randomLong } from "../utils/gramjs-bigint.js";
 import type {
   TelegramSDK,
   SendMessageOptions,
@@ -73,7 +74,7 @@ export function createTelegramSDK(bridge: TelegramBridge, log: PluginLogger): Te
             peer: chatId,
             media: new Api.InputMediaDice({ emoticon }),
             message: "",
-            randomId: randomBytes(8).readBigUInt64BE() as any,
+            randomId: randomLong(),
             replyTo: replyToId
               ? new Api.InputReplyToMessage({ replyToMsgId: replyToId })
               : undefined,
@@ -83,15 +84,15 @@ export function createTelegramSDK(bridge: TelegramBridge, log: PluginLogger): Te
         let value: number | undefined;
         let messageId: number | undefined;
 
-        if (result.className === "Updates" || result.className === "UpdatesCombined") {
-          for (const update of (result as any).updates) {
+        if (result instanceof Api.Updates || result instanceof Api.UpdatesCombined) {
+          for (const update of result.updates) {
             if (
               update.className === "UpdateNewMessage" ||
               update.className === "UpdateNewChannelMessage"
             ) {
               const msg = update.message;
-              if (msg?.media?.className === "MessageMediaDice") {
-                value = msg.media.value;
+              if (msg instanceof Api.Message && msg.media?.className === "MessageMediaDice") {
+                value = (msg.media as Api.MessageMediaDice).value;
                 messageId = msg.id;
                 break;
               }

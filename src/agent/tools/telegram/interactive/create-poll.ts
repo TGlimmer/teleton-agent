@@ -1,8 +1,12 @@
-import { randomBytes } from "crypto";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { MAX_POLL_QUESTION_LENGTH } from "../../../../constants/limits.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_create_poll tool
@@ -108,7 +112,7 @@ export const telegramCreatePollExecutor: ToolExecutor<CreatePollParams> = async 
 
     // Create poll using GramJS
     const poll = new Api.Poll({
-      id: randomBytes(8).readBigUInt64BE() as any,
+      id: randomLong(),
       question: new Api.TextWithEntities({ text: question, entities: [] }),
       answers: options.map(
         (opt, idx) =>
@@ -130,7 +134,7 @@ export const telegramCreatePollExecutor: ToolExecutor<CreatePollParams> = async 
           poll,
         }),
         message: "",
-        randomId: randomBytes(8).readBigUInt64BE() as any,
+        randomId: randomLong(),
       })
     );
 
@@ -143,10 +147,10 @@ export const telegramCreatePollExecutor: ToolExecutor<CreatePollParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error creating poll:", error);
+    log.error({ err: error }, "Error creating poll");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -12,6 +12,10 @@ import { readFileSync, existsSync } from "fs";
 import { extname } from "path";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { validateReadPath, WorkspaceSecurityError } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for vision_analyze tool
@@ -109,7 +113,7 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
     let source: string;
 
     if (hasFilePath) {
-      console.log(`📷 Reading local image: ${filePath}`);
+      log.info(`📷 Reading local image: ${filePath}`);
 
       // Validate workspace path
       let validatedPath;
@@ -148,7 +152,7 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
       data = readFileSync(validatedPath.absolutePath);
       source = `file:${filePath}`;
     } else {
-      console.log(`📷 Downloading image from message ${messageId}...`);
+      log.info(`📷 Downloading image from message ${messageId}...`);
 
       // Get underlying GramJS client
       const gramJsClient = context.bridge.getClient().getClient();
@@ -181,8 +185,8 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
       if (message.photo) {
         mimeType = "image/jpeg";
       } else if (message.document) {
-        const doc = message.document as any;
-        mimeType = doc.mimeType || "application/octet-stream";
+        const doc = message.document;
+        mimeType = ("mimeType" in doc ? doc.mimeType : undefined) || "application/octet-stream";
 
         if (!SUPPORTED_IMAGE_TYPES.includes(mimeType)) {
           return {
@@ -221,7 +225,7 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
 
     // Encode as base64
     const base64 = data.toString("base64");
-    console.log(`📷 Encoded image: ${(data.length / 1024).toFixed(1)}KB (${mimeType})`);
+    log.info(`📷 Encoded image: ${(data.length / 1024).toFixed(1)}KB (${mimeType})`);
 
     // Build multimodal message content
     const imageContent: ImageContent = {
@@ -263,7 +267,7 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
       };
     }
 
-    console.log(`🔍 Analyzing image with ${provider}/${modelId} vision...`);
+    log.info(`🔍 Analyzing image with ${provider}/${modelId} vision...`);
 
     // Call LLM with the image
     const response = await completeSimple(model, visionContext, {
@@ -282,7 +286,7 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
       };
     }
 
-    console.log(`✅ Vision analysis complete (${analysisText.length} chars)`);
+    log.info(`✅ Vision analysis complete (${analysisText.length} chars)`);
 
     return {
       success: true,
@@ -295,10 +299,10 @@ export const visionAnalyzeExecutor: ToolExecutor<VisionAnalyzeParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error analyzing image:", error);
+    log.error({ err: error }, "Error analyzing image");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

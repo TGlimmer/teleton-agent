@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for get transactions
@@ -81,10 +85,10 @@ export const telegramGetStarsTransactionsExecutor: ToolExecutor<GetTransactionsP
       },
     };
   } catch (error) {
-    console.error("Error getting Stars transactions:", error);
+    log.error({ err: error }, "Error getting Stars transactions");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -2,6 +2,9 @@ import type Database from "better-sqlite3";
 import type { EmbeddingProvider } from "../embeddings/provider.js";
 import { HybridSearch } from "./hybrid.js";
 import { MessageStore } from "../feed/messages.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("Memory");
 
 export interface ContextOptions {
   query: string;
@@ -61,7 +64,7 @@ export class ContextBuilder {
         });
         relevantKnowledge.push(...knowledgeResults.map((r) => r.text));
       } catch (error) {
-        console.warn("Knowledge search failed:", error);
+        log.warn({ err: error }, "Knowledge search failed");
       }
     }
 
@@ -94,7 +97,7 @@ export class ContextBuilder {
           }
         }
       } catch (error) {
-        console.warn("Feed search failed:", error);
+        log.warn({ err: error }, "Feed search failed");
       }
 
       if (relevantFeed.length === 0 && recentTgMessages.length > 0) {

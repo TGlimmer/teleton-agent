@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface ChartParams {
   token?: string;
@@ -123,10 +127,10 @@ export const tonChartExecutor: ToolExecutor<ChartParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in ton_chart:", error);
+    log.error({ err: error }, "Error in ton_chart");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -5,6 +5,10 @@ import { verifyPayment } from "../../../ton/payment-verifier.js";
 import { GiftDetector } from "../../../deals/gift-detector.js";
 import { getWalletAddress } from "../../../ton/wallet-service.js";
 import { autoExecuteAfterVerification } from "../../../deals/executor.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface DealVerifyPaymentParams {
   dealId: string;
@@ -98,7 +102,7 @@ export const dealVerifyPaymentExecutor: ToolExecutor<DealVerifyPaymentParams> = 
         };
       }
 
-      console.log(`💰 [Deal] Verifying TON payment for deal #${params.dealId}...`);
+      log.info(`[Deal] Verifying TON payment for deal #${params.dealId}...`);
 
       // Verify TON payment with dealId as memo
       const verification = await verifyPayment(context.db, {
@@ -135,8 +139,8 @@ export const dealVerifyPaymentExecutor: ToolExecutor<DealVerifyPaymentParams> = 
         };
       }
 
-      console.log(
-        `✅ [Deal] Payment verified for #${params.dealId} - TX: ${verification.txHash?.slice(0, 8)}...`
+      log.info(
+        `[Deal] Payment verified for #${params.dealId} - TX: ${verification.txHash?.slice(0, 8)}...`
       );
 
       // Auto-execute deal (send agent's part)
@@ -165,7 +169,7 @@ export const dealVerifyPaymentExecutor: ToolExecutor<DealVerifyPaymentParams> = 
         };
       }
 
-      console.log(`🎁 [Deal] Checking for gift receipt for deal #${params.dealId}...`);
+      log.info(`[Deal] Checking for gift receipt for deal #${params.dealId}...`);
 
       // Use GiftDetector to poll for new gifts
       // Note: We need to pass the agent's own user ID (bot's Telegram ID)
@@ -216,7 +220,7 @@ export const dealVerifyPaymentExecutor: ToolExecutor<DealVerifyPaymentParams> = 
         };
       }
 
-      console.log(`✅ [Deal] Gift verified for #${params.dealId} - msgId: ${matchingGift.msgId}`);
+      log.info(`[Deal] Gift verified for #${params.dealId} - msgId: ${matchingGift.msgId}`);
 
       // Auto-execute deal (send agent's part)
       await autoExecuteAfterVerification(params.dealId, context.db, context.bridge);
@@ -242,10 +246,10 @@ export const dealVerifyPaymentExecutor: ToolExecutor<DealVerifyPaymentParams> = 
       error: `Invalid deal configuration: user_gives_type = ${deal.user_gives_type}`,
     };
   } catch (error) {
-    console.error("Error verifying deal payment:", error);
+    log.error({ err: error }, "Error verifying deal payment");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

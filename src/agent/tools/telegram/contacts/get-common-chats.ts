@@ -1,6 +1,11 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { toLong } from "../../../../utils/gramjs-bigint.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_get_common_chats tool
@@ -53,7 +58,7 @@ export const telegramGetCommonChatsExecutor: ToolExecutor<GetCommonChatsParams> 
     const result = await gramJsClient.invoke(
       new Api.messages.GetCommonChats({
         userId: userEntity,
-        maxId: 0 as any,
+        maxId: toLong(0),
         limit,
       })
     );
@@ -77,10 +82,10 @@ export const telegramGetCommonChatsExecutor: ToolExecutor<GetCommonChatsParams> 
       },
     };
   } catch (error) {
-    console.error("Error getting common Telegram chats:", error);
+    log.error({ err: error }, "Error getting common Telegram chats");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

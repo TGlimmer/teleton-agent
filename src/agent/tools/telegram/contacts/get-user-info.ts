@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for getting user info
@@ -97,7 +101,7 @@ export const telegramGetUserInfoExecutor: ToolExecutor<GetUserInfoParams> = asyn
       )) as Api.users.UserFull;
     } catch (error) {
       // Full user info may not be available for all users
-      console.warn("Could not get full user info:", error);
+      log.warn({ err: error }, "Could not get full user info");
     }
 
     // Extract photo info
@@ -144,17 +148,17 @@ export const telegramGetUserInfoExecutor: ToolExecutor<GetUserInfoParams> = asyn
       userInfo.voiceMessagesForbidden = full.voiceMessagesForbidden || false;
     }
 
-    console.log(`👤 get_user_info: ${userInfo.fullName || userInfo.username || userInfo.id}`);
+    log.info(`👤 get_user_info: ${userInfo.fullName || userInfo.username || userInfo.id}`);
 
     return {
       success: true,
       data: userInfo,
     };
   } catch (error) {
-    console.error("Error getting user info:", error);
+    log.error({ err: error }, "Error getting user info");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

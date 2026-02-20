@@ -2,6 +2,9 @@ import type { TaskStore } from "../memory/agent/tasks.js";
 import type { TelegramBridge } from "./bridge.js";
 import { BATCH_TRIGGER_DELAY_MS } from "../constants/timeouts.js";
 import { MAX_DEPENDENTS_PER_TASK } from "../constants/limits.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Telegram");
 
 /**
  * Resolves task dependencies and triggers dependent tasks when parents complete
@@ -40,13 +43,13 @@ export class TaskDependencyResolver {
       const truncated = allDependentIds.length > MAX_DEPENDENTS_PER_TASK;
 
       if (truncated) {
-        console.warn(
+        log.warn(
           `⚠️ Task ${completedTaskId} has ${allDependentIds.length} dependents, ` +
             `only processing first ${MAX_DEPENDENTS_PER_TASK} (security limit)`
         );
       }
 
-      console.log(
+      log.info(
         `📊 Task ${completedTaskId} completed. Checking ${dependentIds.length} dependent task(s)...`
       );
 
@@ -58,7 +61,7 @@ export class TaskDependencyResolver {
         const task = this.taskStore.getTask(depId);
 
         if (!task) {
-          console.warn(`Dependent task ${depId} not found`);
+          log.warn(`Dependent task ${depId} not found`);
           continue;
         }
 
@@ -69,7 +72,7 @@ export class TaskDependencyResolver {
 
         // Check if all dependencies are satisfied
         if (!this.taskStore.canExecute(depId)) {
-          console.log(`⏳ Task ${depId} still waiting for dependencies`);
+          log.info(`⏳ Task ${depId} still waiting for dependencies`);
           continue;
         }
 
@@ -84,7 +87,7 @@ export class TaskDependencyResolver {
         await this.triggerTask(tasksToTrigger[i]);
       }
     } catch (error) {
-      console.error("Error in dependency resolver:", error);
+      log.error({ err: error }, "Error in dependency resolver");
     }
   }
 
@@ -115,13 +118,13 @@ export class TaskDependencyResolver {
       const truncated = allDependentIds.length > MAX_DEPENDENTS_PER_TASK;
 
       if (truncated) {
-        console.warn(
+        log.warn(
           `⚠️ Task ${failedTaskId} has ${allDependentIds.length} dependents, ` +
             `only cancelling first ${MAX_DEPENDENTS_PER_TASK} (security limit)`
         );
       }
 
-      console.log(
+      log.info(
         `❌ Task ${failedTaskId} failed. Cancelling ${dependentIds.length} dependent task(s)...`
       );
 
@@ -145,14 +148,14 @@ export class TaskDependencyResolver {
 
         if (skipOnFailure) {
           this.taskStore.cancelTask(depId);
-          console.log(`  ↳ Cancelled task ${depId}: ${task.description}`);
+          log.info(`↳ Cancelled task ${depId}: ${task.description}`);
 
           // Recursively cancel dependents
           await this.onTaskFail(depId);
         }
       }
     } catch (error) {
-      console.error("Error handling task failure cascade:", error);
+      log.error({ err: error }, "Error handling task failure cascade");
     }
   }
 
@@ -163,11 +166,11 @@ export class TaskDependencyResolver {
     try {
       const task = this.taskStore.getTask(taskId);
       if (!task) {
-        console.warn(`Cannot trigger task ${taskId}: not found`);
+        log.warn(`Cannot trigger task ${taskId}: not found`);
         return;
       }
 
-      console.log(`🚀 Triggering dependent task: ${task.description}`);
+      log.info(`🚀 Triggering dependent task: ${task.description}`);
 
       // Get "me" entity for Saved Messages
       const gramJsClient = this.bridge.getClient().getClient();
@@ -178,9 +181,9 @@ export class TaskDependencyResolver {
         message: `[TASK:${taskId}] ${task.description}`,
       });
 
-      console.log(`  ↳ Sent [TASK:${taskId}] to Saved Messages`);
+      log.info(`↳ Sent [TASK:${taskId}] to Saved Messages`);
     } catch (error) {
-      console.error(`Error triggering task ${taskId}:`, error);
+      log.error({ err: error }, `Error triggering task ${taskId}`);
 
       // Mark task as failed if we can't trigger it
       this.taskStore.failTask(taskId, `Failed to trigger: ${error}`);

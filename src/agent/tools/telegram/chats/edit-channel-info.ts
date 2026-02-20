@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for editing channel info
@@ -102,7 +106,7 @@ export const telegramEditChannelInfoExecutor: ToolExecutor<EditChannelInfoParams
       updates.push(`about → "${about.substring(0, 50)}${about.length > 50 ? "..." : ""}"`);
     }
 
-    console.log(`✏️ edit_channel_info: ${channel.title} - ${updates.join(", ")}`);
+    log.info(`✏️ edit_channel_info: ${channel.title} - ${updates.join(", ")}`);
 
     return {
       success: true,
@@ -113,7 +117,7 @@ export const telegramEditChannelInfoExecutor: ToolExecutor<EditChannelInfoParams
       },
     };
   } catch (error: any) {
-    console.error("Error editing channel info:", error);
+    log.error({ err: error }, "Error editing channel info");
 
     // Handle common errors
     if (error.message?.includes("CHAT_ADMIN_REQUIRED")) {
@@ -134,7 +138,7 @@ export const telegramEditChannelInfoExecutor: ToolExecutor<EditChannelInfoParams
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

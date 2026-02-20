@@ -2,10 +2,14 @@
  * telegram_send_dice - Send animated dice/games in Telegram
  */
 
-import { randomBytes } from "crypto";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface SendDiceParams {
   chat_id: string;
@@ -61,7 +65,7 @@ export const telegramSendDiceExecutor: ToolExecutor<SendDiceParams> = async (
         peer: chat_id,
         media: new Api.InputMediaDice({ emoticon }),
         message: "",
-        randomId: randomBytes(8).readBigUInt64BE() as any,
+        randomId: randomLong(),
         replyTo: reply_to ? new Api.InputReplyToMessage({ replyToMsgId: reply_to }) : undefined,
       })
     );
@@ -124,10 +128,10 @@ export const telegramSendDiceExecutor: ToolExecutor<SendDiceParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in telegram_send_dice:", error);
+    log.error({ err: error }, "Error in telegram_send_dice");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

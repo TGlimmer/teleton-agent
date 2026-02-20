@@ -1,8 +1,12 @@
-import { randomBytes } from "crypto";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { validateReadPath, WorkspaceSecurityError } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_send_sticker tool
@@ -118,7 +122,7 @@ export const telegramSendStickerExecutor: ToolExecutor<SendStickerParams> = asyn
             }),
           }),
           message: "",
-          randomId: randomBytes(8).readBigUInt64BE() as any,
+          randomId: randomLong(),
           replyTo: replyToId ? new Api.InputReplyToMessage({ replyToMsgId: replyToId }) : undefined,
         })
       );
@@ -161,10 +165,10 @@ export const telegramSendStickerExecutor: ToolExecutor<SendStickerParams> = asyn
       },
     };
   } catch (error) {
-    console.error("Error sending sticker:", error);
+    log.error({ err: error }, "Error sending sticker");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

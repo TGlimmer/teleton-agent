@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { WebUIServerDeps, APIResponse } from "../types.js";
 import { getTaskStore, type TaskStatus } from "../../memory/agent/tasks.js";
+import { getErrorMessage } from "../../utils/errors.js";
 
 const VALID_STATUSES: TaskStatus[] = ["pending", "in_progress", "done", "failed", "cancelled"];
 
@@ -35,7 +36,7 @@ export function createTasksRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -65,7 +66,7 @@ export function createTasksRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -85,7 +86,7 @@ export function createTasksRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -105,7 +106,7 @@ export function createTasksRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }
@@ -125,7 +126,7 @@ export function createTasksRoutes(deps: WebUIServerDeps) {
     } catch (error) {
       const response: APIResponse = {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
       };
       return c.json(response, 500);
     }

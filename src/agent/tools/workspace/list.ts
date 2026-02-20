@@ -9,6 +9,7 @@ import {
   WORKSPACE_ROOT,
   WorkspaceSecurityError,
 } from "../../../workspace/index.js";
+import { getErrorMessage } from "../../../utils/errors.js";
 
 interface WorkspaceListParams {
   path?: string;
@@ -135,7 +136,7 @@ export const workspaceListExecutor: ToolExecutor<WorkspaceListParams> = async (
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -9,6 +9,10 @@ import type { Deal } from "./types.js";
 import { sendTon } from "../ton/transfer.js";
 import { formatAsset } from "./utils.js";
 import { JournalStore } from "../memory/journal-store.js";
+import { getErrorMessage } from "../utils/errors.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Deal");
 
 export interface ExecutionResult {
   success: boolean;
@@ -61,7 +65,7 @@ export async function executeDeal(
       };
     }
 
-    console.log(`⚙️ [Deal] Executing deal #${dealId}...`);
+    log.info(`Executing deal #${dealId}...`);
 
     // Case 1: Agent sends TON
     if (deal.agent_gives_type === "ton") {
@@ -79,8 +83,8 @@ export async function executeDeal(
         };
       }
 
-      console.log(
-        `💸 [Deal] Sending ${deal.agent_gives_ton_amount} TON to ${deal.user_payment_wallet.slice(0, 8)}...`
+      log.info(
+        `Sending ${deal.agent_gives_ton_amount} TON to ${deal.user_payment_wallet.slice(0, 8)}...`
       );
 
       // Send TON to user's wallet
@@ -110,7 +114,7 @@ export async function executeDeal(
         WHERE id = ?`
       ).run(txHash, dealId);
 
-      console.log(`✅ [Deal] #${dealId} completed - TON sent - TX: ${txHash.slice(0, 8)}...`);
+      log.info(`Deal #${dealId} completed - TON sent - TX: ${txHash.slice(0, 8)}...`);
 
       // Log to business journal
       logDealToJournal(deal, db, txHash);
@@ -142,8 +146,8 @@ Thank you for trading! 🎉`,
         };
       }
 
-      console.log(
-        `🎁 [Deal] Sending gift ${deal.agent_gives_gift_slug} (msgId: ${deal.agent_gives_gift_id}) to user ${deal.user_telegram_id}...`
+      log.info(
+        `Sending gift ${deal.agent_gives_gift_slug} (msgId: ${deal.agent_gives_gift_id}) to user ${deal.user_telegram_id}...`
       );
 
       // Transfer collectible gift using Telegram API
@@ -170,7 +174,7 @@ Thank you for trading! 🎉`,
         } catch (freeTransferError: any) {
           // If PAYMENT_REQUIRED, use payment flow
           if (freeTransferError?.errorMessage === "PAYMENT_REQUIRED") {
-            console.log("Transfer requires payment, using payment flow...");
+            log.info("Transfer requires payment, using payment flow...");
 
             const invoice = new Api.InputInvoiceStarGiftTransfer({
               stargift: stargiftInput,
@@ -205,7 +209,7 @@ Thank you for trading! 🎉`,
           WHERE id = ?`
         ).run(sentMsgId, dealId);
 
-        console.log(`✅ [Deal] #${dealId} completed - Gift transferred`);
+        log.info(`Deal #${dealId} completed - Gift transferred`);
 
         // Log to business journal
         logDealToJournal(deal, db);
@@ -225,7 +229,7 @@ Thank you for trading! 🎉`,
           giftMsgId: sentMsgId,
         };
       } catch (error) {
-        console.error(`❌ [Deal] Failed to transfer gift for deal #${dealId}:`, error);
+        log.error({ err: error }, `Failed to transfer gift for deal #${dealId}`);
 
         // Mark deal as failed (clear agent_sent_at lock since send didn't complete)
         db.prepare(
@@ -234,14 +238,11 @@ Thank you for trading! 🎉`,
             agent_sent_at = NULL,
             notes = ?
           WHERE id = ?`
-        ).run(
-          `Gift transfer error: ${error instanceof Error ? error.message : String(error)}`,
-          dealId
-        );
+        ).run(`Gift transfer error: ${getErrorMessage(error)}`, dealId);
 
         return {
           success: false,
-          error: `Gift transfer failed: ${error instanceof Error ? error.message : String(error)}`,
+          error: `Gift transfer failed: ${getErrorMessage(error)}`,
         };
       }
     }
@@ -252,18 +253,18 @@ Thank you for trading! 🎉`,
       error: `Invalid deal configuration: agent_gives_type = ${deal.agent_gives_type}`,
     };
   } catch (error) {
-    console.error(`❌ [Deal] Error executing deal #${dealId}:`, error);
+    log.error({ err: error }, `Error executing deal #${dealId}`);
     // Release lock on unexpected error
     try {
       db.prepare(
         `UPDATE deals SET agent_sent_at = NULL, status = 'failed', notes = ? WHERE id = ? AND status = 'verified'`
-      ).run(`Execution error: ${error instanceof Error ? error.message : String(error)}`, dealId);
+      ).run(`Execution error: ${getErrorMessage(error)}`, dealId);
     } catch (rollbackErr) {
-      console.error(`❌ [Deal] CRITICAL: Could not rollback deal #${dealId}:`, rollbackErr);
+      log.error({ err: rollbackErr }, `CRITICAL: Could not rollback deal #${dealId}`);
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -307,7 +308,7 @@ function logDealToJournal(deal: Deal, db: Database.Database, txHash?: string): v
     });
   } catch (error) {
     // Non-critical: don't let journal failure break deal execution
-    console.error(`⚠️ [Deal] Failed to log deal #${deal.id} to journal:`, error);
+    log.error({ err: error }, `Failed to log deal #${deal.id} to journal`);
   }
 }
 
@@ -319,12 +320,12 @@ export async function autoExecuteAfterVerification(
   db: Database.Database,
   bridge: TelegramBridge
 ): Promise<void> {
-  console.log(`🔄 [Deal] Auto-executing deal #${dealId} after verification...`);
+  log.info(`Auto-executing deal #${dealId} after verification...`);
 
   const result = await executeDeal(dealId, db, bridge);
 
   if (!result.success) {
-    console.error(`❌ [Deal] Auto-execution failed for #${dealId}:`, result.error);
+    log.error(`Auto-execution failed for #${dealId}: ${result.error}`);
 
     // Notify user of failure
     const deal = db.prepare(`SELECT * FROM deals WHERE id = ?`).get(dealId) as Deal | undefined;

@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_search_messages tool
@@ -71,15 +75,18 @@ export const telegramSearchMessagesExecutor: ToolExecutor<SearchMessagesParams> 
       })
     );
 
-    // Parse results
-    const resultData = result as any;
-    const messages = resultData.messages.map((msg: any) => ({
-      id: msg.id,
-      text: msg.message || "",
-      senderId: msg.fromId?.userId?.toString() || null,
-      date: msg.date,
-      timestamp: new Date(msg.date * 1000).toISOString(),
-    }));
+    // Parse results — all TypeMessages variants have .messages
+    const resultData = result as Api.messages.Messages;
+    const messages = resultData.messages.map((msg) => {
+      const m = msg as Api.Message;
+      return {
+        id: m.id,
+        text: m.message || "",
+        senderId: (m.fromId as Api.PeerUser)?.userId?.toString() || null,
+        date: m.date,
+        timestamp: new Date(m.date * 1000).toISOString(),
+      };
+    });
 
     return {
       success: true,
@@ -91,10 +98,10 @@ export const telegramSearchMessagesExecutor: ToolExecutor<SearchMessagesParams> 
       },
     };
   } catch (error) {
-    console.error("Error searching Telegram messages:", error);
+    log.error({ err: error }, "Error searching Telegram messages");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

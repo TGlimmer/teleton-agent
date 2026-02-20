@@ -6,6 +6,10 @@ import { SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
 import { DEX, pTON } from "@ston-fi/sdk";
 import { StonApiClient } from "@ston-fi/api";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 // Native TON address used by STON.fi API
 const NATIVE_TON_ADDRESS = "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c";
@@ -81,7 +85,7 @@ export const stonfiSwapExecutor: ToolExecutor<JettonSwapParams> = async (
     const fromDecimals = fromAssetInfo?.decimals ?? 9;
     const offerUnits = BigInt(Math.round(amount * 10 ** fromDecimals)).toString();
 
-    console.log(`Simulating swap: ${amount} ${fromAddress} → ${toAddress}`);
+    log.info(`Simulating swap: ${amount} ${fromAddress} → ${toAddress}`);
     const simulationResult = await stonApiClient.simulateSwap({
       offerAddress: fromAddress,
       askAddress: toAddress,
@@ -179,10 +183,10 @@ export const stonfiSwapExecutor: ToolExecutor<JettonSwapParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in stonfi_swap:", error);
+    log.error({ err: error }, "Error in stonfi_swap");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

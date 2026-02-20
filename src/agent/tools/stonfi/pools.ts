@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { fetchWithTimeout } from "../../../utils/fetch.js";
 import { STONFI_API_BASE_URL } from "../../../constants/api-endpoints.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface JettonPoolsParams {
   jetton_address?: string;
   limit?: number;
@@ -134,10 +138,10 @@ export const stonfiPoolsExecutor: ToolExecutor<JettonPoolsParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in stonfi_pools:", error);
+    log.error({ err: error }, "Error in stonfi_pools");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

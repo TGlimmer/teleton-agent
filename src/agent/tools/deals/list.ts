@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import type { Deal } from "../../../deals/types.js";
 import { formatAsset } from "../../../deals/utils.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface DealListParams {
   status?: string;
@@ -147,10 +151,10 @@ export const dealListExecutor: ToolExecutor<DealListParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error listing deals:", error);
+    log.error({ err: error }, "Error listing deals");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

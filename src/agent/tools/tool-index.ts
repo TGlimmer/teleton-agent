@@ -7,6 +7,9 @@ import {
   TOOL_RAG_VECTOR_WEIGHT,
   TOOL_RAG_KEYWORD_WEIGHT,
 } from "../../constants/limits.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("ToolRAG");
 
 export interface ToolIndexConfig {
   topK: number;
@@ -81,7 +84,7 @@ export class ToolIndex {
         );
       `);
     } catch (error) {
-      console.error("[tool-rag] Failed to create vector table:", error);
+      log.error({ err: error }, "Failed to create vector table");
       this.vectorEnabled = false;
     }
   }
@@ -145,7 +148,7 @@ export class ToolIndex {
       this._isIndexed = true;
       return entries.length;
     } catch (error) {
-      console.error("[tool-rag] Indexing failed:", error);
+      log.error({ err: error }, "Indexing failed");
       this._isIndexed = false;
       return 0;
     }
@@ -207,9 +210,9 @@ export class ToolIndex {
         txn();
       }
 
-      console.log(`[tool-rag] Delta reindex: -${removed.length} +${added.length} tools`);
+      log.info(`Delta reindex: -${removed.length} +${added.length} tools`);
     } catch (error) {
-      console.error("[tool-rag] Delta reindex failed:", error);
+      log.error({ err: error }, "Delta reindex failed");
     }
   }
 
@@ -276,7 +279,7 @@ export class ToolIndex {
         vectorScore: 1 - row.distance,
       }));
     } catch (error) {
-      console.error("[tool-rag] Vector search error:", error);
+      log.error({ err: error }, "Vector search error");
       return [];
     }
   }
@@ -310,7 +313,7 @@ export class ToolIndex {
         keywordScore: bm25ToScore(row.score),
       }));
     } catch (error) {
-      console.error("[tool-rag] FTS5 search error:", error);
+      log.error({ err: error }, "FTS5 search error");
       return [];
     }
   }

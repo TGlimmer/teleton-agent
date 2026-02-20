@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Tool definition for getting chat folders
@@ -26,14 +30,16 @@ export const telegramGetFoldersExecutor: ToolExecutor<{}> = async (
 
     // Get dialog filters (folders)
     // GetDialogFilters returns messages.DialogFilters { filters: [] } (not a plain array)
-    const result = await gramJsClient.invoke(new Api.messages.GetDialogFilters());
-    const filterList: any[] = Array.isArray(result) ? result : ((result as any).filters ?? []);
+    const dialogFilters = (await gramJsClient.invoke(
+      new Api.messages.GetDialogFilters()
+    )) as Api.messages.DialogFilters;
+    const filterList = dialogFilters.filters ?? [];
 
     const folders = filterList
-      .filter((filter: any) => filter.className === "DialogFilter")
-      .map((filter: any) => ({
+      .filter((filter): filter is Api.DialogFilter => filter.className === "DialogFilter")
+      .map((filter) => ({
         id: filter.id,
-        title: filter.title?.text ?? filter.title,
+        title: (filter.title as any)?.text ?? filter.title,
         emoji: filter.emoticon || null,
         pinnedPeersCount: filter.pinnedPeers?.length || 0,
         includedPeersCount: filter.includePeers?.length || 0,
@@ -56,10 +62,10 @@ export const telegramGetFoldersExecutor: ToolExecutor<{}> = async (
       },
     };
   } catch (error) {
-    console.error("Error getting folders:", error);
+    log.error({ err: error }, "Error getting folders");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

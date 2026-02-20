@@ -8,6 +8,9 @@
 
 import { z } from "zod";
 import type { Config } from "../../config/schema.js";
+import { createLogger } from "../../utils/logger.js";
+
+const log = createLogger("PluginValidator");
 
 const ManifestSchema = z.object({
   name: z
@@ -59,24 +62,24 @@ export function validateToolDefs(defs: unknown[], pluginName: string): SimpleToo
 
   for (const def of defs) {
     if (!def || typeof def !== "object") {
-      console.warn(`⚠️  [${pluginName}] tool is not an object, skipping`);
+      log.warn(`[${pluginName}] tool is not an object, skipping`);
       continue;
     }
 
     const t = def as Record<string, unknown>;
 
     if (!t.name || typeof t.name !== "string") {
-      console.warn(`⚠️  [${pluginName}] tool missing 'name', skipping`);
+      log.warn(`[${pluginName}] tool missing 'name', skipping`);
       continue;
     }
 
     if (!t.description || typeof t.description !== "string") {
-      console.warn(`⚠️  [${pluginName}] tool "${t.name}" missing 'description', skipping`);
+      log.warn(`[${pluginName}] tool "${t.name}" missing 'description', skipping`);
       continue;
     }
 
     if (!t.execute || typeof t.execute !== "function") {
-      console.warn(`⚠️  [${pluginName}] tool "${t.name}" missing 'execute' function, skipping`);
+      log.warn(`[${pluginName}] tool "${t.name}" missing 'execute' function, skipping`);
       continue;
     }
 

@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { validateReadPath, WorkspaceSecurityError } from "../../../../workspace/index.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_send_photo tool
@@ -82,10 +86,10 @@ export const telegramSendPhotoExecutor: ToolExecutor<SendPhotoParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error sending photo:", error);
+    log.error({ err: error }, "Error sending photo");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

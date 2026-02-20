@@ -1,7 +1,12 @@
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api } from "telegram";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { MAX_DEPENDENTS_PER_TASK } from "../../../../constants/limits.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_create_scheduled_task tool
@@ -257,7 +262,7 @@ export const telegramCreateScheduledTaskExecutor: ToolExecutor<CreateScheduledTa
           peer: me,
           message: taskMessage,
           scheduleDate: scheduleTimestamp,
-          randomId: Date.now() as any,
+          randomId: randomLong(),
         })
       );
 
@@ -288,10 +293,10 @@ export const telegramCreateScheduledTaskExecutor: ToolExecutor<CreateScheduledTa
       error: "Invalid state: no scheduleDate or dependsOn",
     };
   } catch (error) {
-    console.error("Error creating scheduled task:", error);
+    log.error({ err: error }, "Error creating scheduled task");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

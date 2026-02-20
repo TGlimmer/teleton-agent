@@ -6,6 +6,9 @@ import { createTonSDK } from "./ton.js";
 import { createTelegramSDK } from "./telegram.js";
 import { createSecretsSDK } from "./secrets.js";
 import { createStorageSDK } from "./storage.js";
+import { createLogger as pinoCreateLogger } from "../utils/logger.js";
+
+const sdkLog = pinoCreateLogger("SDK");
 
 // Re-export everything from @teleton-agent/sdk for internal consumers
 export type {
@@ -85,16 +88,12 @@ export function createPluginSDK(deps: SDKDependencies, opts: CreatePluginSDKOpti
 }
 
 function createLogger(pluginName: string): PluginLogger {
-  const prefix = `[${pluginName}]`;
+  const pinoChild = pinoCreateLogger(`plugin:${pluginName}`);
   return {
-    info: (...args) => console.log(prefix, ...args),
-    warn: (...args) => console.warn(`⚠️ ${prefix}`, ...args),
-    error: (...args) => console.error(`❌ ${prefix}`, ...args),
-    debug: (...args) => {
-      if (process.env.DEBUG || process.env.VERBOSE) {
-        console.log(`🔍 ${prefix}`, ...args);
-      }
-    },
+    info: (...args) => pinoChild.info(args.map(String).join(" ")),
+    warn: (...args) => pinoChild.warn(args.map(String).join(" ")),
+    error: (...args) => pinoChild.error(args.map(String).join(" ")),
+    debug: (...args) => pinoChild.debug(args.map(String).join(" ")),
   };
 }
 
@@ -123,14 +122,14 @@ function semverGte(a: SemVer, b: SemVer): boolean {
 export function semverSatisfies(current: string, range: string): boolean {
   const cur = parseSemver(current);
   if (!cur) {
-    console.warn(`⚠️  [SDK] Could not parse current version "${current}", skipping check`);
+    sdkLog.warn(`[SDK] Could not parse current version "${current}", skipping check`);
     return true;
   }
 
   if (range.startsWith(">=")) {
     const req = parseSemver(range.slice(2));
     if (!req) {
-      console.warn(`⚠️  [SDK] Malformed sdkVersion range "${range}", skipping check`);
+      sdkLog.warn(`[SDK] Malformed sdkVersion range "${range}", skipping check`);
       return true;
     }
     return semverGte(cur, req);
@@ -139,7 +138,7 @@ export function semverSatisfies(current: string, range: string): boolean {
   if (range.startsWith("^")) {
     const req = parseSemver(range.slice(1));
     if (!req) {
-      console.warn(`⚠️  [SDK] Malformed sdkVersion range "${range}", skipping check`);
+      sdkLog.warn(`[SDK] Malformed sdkVersion range "${range}", skipping check`);
       return true;
     }
     if (req.major === 0) {
@@ -150,7 +149,7 @@ export function semverSatisfies(current: string, range: string): boolean {
 
   const req = parseSemver(range);
   if (!req) {
-    console.warn(`⚠️  [SDK] Malformed sdkVersion "${range}", skipping check`);
+    sdkLog.warn(`[SDK] Malformed sdkVersion "${range}", skipping check`);
     return true;
   }
   return cur.major === req.major && cur.minor === req.minor && cur.patch === req.patch;

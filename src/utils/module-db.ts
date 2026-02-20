@@ -3,6 +3,9 @@ import { existsSync, mkdirSync, chmodSync } from "fs";
 import { dirname, join } from "path";
 import type { ToolExecutor } from "../agent/tools/types.js";
 import { TELETON_ROOT } from "../workspace/paths.js";
+import { createLogger } from "./logger.js";
+
+const log = createLogger("Utils");
 export const JOURNAL_SCHEMA = `
   CREATE TABLE IF NOT EXISTS journal (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,15 +139,15 @@ export function migrateFromMainDb(moduleDb: Database.Database, tables: string[])
         } catch {
           // ignore if drop fails (e.g. read-only)
         }
-        console.log(`  📦 Migrated ${src.c} rows from memory.db → ${table} (source dropped)`);
+        log.info(`Migrated ${src.c} rows from memory.db → ${table} (source dropped)`);
       } catch (e) {
-        console.warn(`  ⚠️ Could not migrate table ${table}:`, e);
+        log.warn({ err: e }, `Could not migrate table ${table}`);
       }
     }
 
     moduleDb.exec(`DETACH DATABASE main_db`);
   } catch (e) {
-    console.warn(`⚠️ Migration from memory.db failed:`, e);
+    log.warn({ err: e }, `Migration from memory.db failed`);
     try {
       moduleDb.exec(`DETACH DATABASE main_db`);
     } catch {}

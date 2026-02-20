@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for checking username
@@ -105,7 +109,7 @@ export const telegramCheckUsernameExecutor: ToolExecutor<CheckUsernameParams> = 
         }
       }
 
-      console.log(`🔍 check_username: @${cleanUsername} → ${entityType}`);
+      log.info(`🔍 check_username: @${cleanUsername} → ${entityType}`);
 
       return {
         success: true,
@@ -123,7 +127,7 @@ export const telegramCheckUsernameExecutor: ToolExecutor<CheckUsernameParams> = 
         error.message?.includes("No user has") ||
         error.errorMessage === "USERNAME_NOT_OCCUPIED"
       ) {
-        console.log(`🔍 check_username: @${cleanUsername} → not found (available)`);
+        log.info(`🔍 check_username: @${cleanUsername} → not found (available)`);
         return {
           success: true,
           data: {
@@ -146,10 +150,10 @@ export const telegramCheckUsernameExecutor: ToolExecutor<CheckUsernameParams> = 
       throw error;
     }
   } catch (error) {
-    console.error("Error checking username:", error);
+    log.error({ err: error }, "Error checking username");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

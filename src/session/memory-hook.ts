@@ -4,11 +4,15 @@ import { complete, type Context } from "@mariozechner/pi-ai";
 import { summarizeViaClaude, formatMessagesForSummary } from "../memory/ai-summarization.js";
 import { getUtilityModel } from "../agent/client.js";
 import type { SupportedProvider } from "../config/providers.js";
+import { createLogger } from "../utils/logger.js";
 import {
   SESSION_SLUG_RECENT_MESSAGES,
   SESSION_SLUG_MAX_TOKENS,
   DEFAULT_MAX_SUMMARY_TOKENS,
 } from "../constants/limits.js";
+import { getErrorMessage } from "../utils/errors.js";
+
+const log = createLogger("Session");
 
 /**
  * Generate a semantic slug for a session using LLM.
@@ -63,7 +67,7 @@ Slug:`,
         .slice(0, 50) || "session"
     );
   } catch (error) {
-    console.warn("Slug generation failed, using fallback:", error);
+    log.warn({ err: error }, "Slug generation failed, using fallback");
     const now = new Date();
     return `session-${now.getHours().toString().padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}`;
   }
@@ -90,7 +94,7 @@ export async function saveSessionMemory(params: {
     const now = new Date();
     const dateStr = now.toISOString().split("T")[0];
 
-    console.log("🏷️  Generating semantic slug for session memory...");
+    log.info("Generating semantic slug for session memory...");
     const slug = await generateSlugViaClaude({
       messages: params.context.messages,
       apiKey: params.apiKey,
@@ -103,7 +107,7 @@ export async function saveSessionMemory(params: {
 
     const timeStr = now.toISOString().split("T")[1].split(".")[0];
 
-    console.log("📝 Generating session summary...");
+    log.info("Generating session summary...");
     let summary: string;
     try {
       summary = await summarizeViaClaude({
@@ -116,7 +120,7 @@ export async function saveSessionMemory(params: {
         utilityModel: params.utilityModel,
       });
     } catch (error) {
-      console.warn("Session summary generation failed:", error);
+      log.warn({ err: error }, "Session summary generation failed");
       summary = `Session contained ${params.context.messages.length} messages. Summary generation failed.`;
     }
 
@@ -146,11 +150,8 @@ This session was compacted and migrated to a new session ID. The summary above p
     await writeFile(filepath, content, "utf-8");
 
     const relPath = filepath.replace(TELETON_ROOT, "~/.teleton");
-    console.log(`💾 Session memory saved: ${relPath}`);
+    log.info(`Session memory saved: ${relPath}`);
   } catch (error) {
-    console.error(
-      "Failed to save session memory:",
-      error instanceof Error ? error.message : String(error)
-    );
+    log.error({ err: error }, "Failed to save session memory");
   }
 }

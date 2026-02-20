@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomLong } from "../../../utils/gramjs-bigint.js";
 import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { generateDealId, calculateExpiry, formatDealProposal } from "../../../deals/utils.js";
@@ -7,6 +7,10 @@ import {
   formatStrategyCheckJSON,
   type AssetValue,
 } from "../../../deals/strategy-checker.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface DealProposeParams {
   chatId: string;
@@ -151,9 +155,7 @@ export const dealProposeExecutor: ToolExecutor<DealProposeParams> = async (
         expiresAt
       );
 
-    console.log(
-      `📋 [Deal] Created deal #${dealId} - profit: ${strategyCheck.profit.toFixed(2)} TON`
-    );
+    log.info(`[Deal] Created deal #${dealId} - profit: ${strategyCheck.profit.toFixed(2)} TON`);
 
     // Send inline bot message with Accept/Decline buttons
     const botUsername = context.config?.telegram?.bot_username;
@@ -163,7 +165,7 @@ export const dealProposeExecutor: ToolExecutor<DealProposeParams> = async (
       try {
         inlineSent = await sendInlineBotResult(context.bridge, params.chatId, botUsername, dealId);
       } catch (inlineError) {
-        console.warn(`⚠️ [Deal] Failed to send inline bot result:`, inlineError);
+        log.warn({ err: inlineError }, "[Deal] Failed to send inline bot result");
       }
     }
 
@@ -213,10 +215,10 @@ export const dealProposeExecutor: ToolExecutor<DealProposeParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error creating deal proposal:", error);
+    log.error({ err: error }, "Error creating deal proposal");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };
@@ -249,7 +251,7 @@ async function sendInlineBotResult(
   );
 
   if (!results.results || results.results.length === 0) {
-    console.warn(`⚠️ [Deal] No inline results returned for deal ${dealId}`);
+    log.warn(`[Deal] No inline results returned for deal ${dealId}`);
     return false;
   }
 
@@ -263,10 +265,10 @@ async function sendInlineBotResult(
       peer: peer,
       queryId: results.queryId,
       id: resultToSend.id,
-      randomId: randomBytes(8).readBigUInt64BE() as any,
+      randomId: randomLong(),
     })
   );
 
-  console.log(`✅ [Deal] Inline bot message sent for deal #${dealId}`);
+  log.info(`[Deal] Inline bot message sent for deal #${dealId}`);
   return true;
 }

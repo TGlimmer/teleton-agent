@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
 import { Api, helpers } from "telegram";
 import { TELEGRAM_MAX_MESSAGE_LENGTH } from "../../../../constants/limits.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_quote_reply tool
@@ -98,10 +102,10 @@ export const telegramQuoteReplyExecutor: ToolExecutor<QuoteReplyParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error sending quote reply:", error);
+    log.error({ err: error }, "Error sending quote reply");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

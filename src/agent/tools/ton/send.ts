@@ -4,6 +4,10 @@ import { loadWallet, getKeyPair } from "../../../ton/wallet-service.js";
 import { WalletContractV5R1, TonClient, toNano, internal } from "@ton/ton";
 import { Address, SendMode } from "@ton/core";
 import { getCachedHttpEndpoint } from "../../../ton/endpoint.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 interface SendParams {
   to: string;
   amount: number;
@@ -95,10 +99,10 @@ export const tonSendExecutor: ToolExecutor<SendParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in ton_send:", error);
+    log.error({ err: error }, "Error in ton_send");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

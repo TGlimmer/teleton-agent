@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_search_gifs tool
@@ -73,10 +77,10 @@ export const telegramSearchGifsExecutor: ToolExecutor<SearchGifsParams> = async 
       },
     };
   } catch (error) {
-    console.error("Error searching GIFs:", error);
+    log.error({ err: error }, "Error searching GIFs");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

@@ -2,6 +2,9 @@ import { randomUUID } from "crypto";
 import type { SessionResetPolicy } from "../config/schema.js";
 import { getDatabase } from "../memory/index.js";
 import type Database from "better-sqlite3";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Session");
 
 export interface SessionEntry {
   sessionId: string;
@@ -19,29 +22,48 @@ export interface SessionEntry {
 }
 
 export type SessionStore = Record<string, SessionEntry>;
+
+interface SessionRow {
+  id: string;
+  chat_id: string;
+  started_at: number;
+  updated_at: number;
+  ended_at: number | null;
+  summary: string | null;
+  message_count: number;
+  tokens_used: number;
+  last_message_id: number | null;
+  last_channel: string | null;
+  last_to: string | null;
+  context_tokens: number | null;
+  model: string | null;
+  provider: string | null;
+  last_reset_date: string | null;
+}
+
 function getDb(): Database.Database {
   return getDatabase().getDb();
 }
-function rowToSession(row: any): SessionEntry {
+function rowToSession(row: SessionRow): SessionEntry {
   return {
     sessionId: row.id,
     chatId: row.chat_id,
     createdAt: row.started_at,
     updatedAt: row.updated_at,
     messageCount: row.message_count || 0,
-    lastMessageId: row.last_message_id,
-    lastChannel: row.last_channel,
-    lastTo: row.last_to,
-    contextTokens: row.context_tokens,
-    model: row.model,
-    provider: row.provider,
-    lastResetDate: row.last_reset_date,
+    lastMessageId: row.last_message_id ?? undefined,
+    lastChannel: row.last_channel ?? undefined,
+    lastTo: row.last_to ?? undefined,
+    contextTokens: row.context_tokens ?? undefined,
+    model: row.model ?? undefined,
+    provider: row.provider ?? undefined,
+    lastResetDate: row.last_reset_date ?? undefined,
   };
 }
 export function loadSessionStore(): SessionStore {
   try {
     const db = getDb();
-    const rows = db.prepare("SELECT * FROM sessions").all() as any[];
+    const rows = db.prepare("SELECT * FROM sessions").all() as SessionRow[];
 
     const store: SessionStore = {};
     for (const row of rows) {
@@ -51,7 +73,7 @@ export function loadSessionStore(): SessionStore {
 
     return store;
   } catch (error) {
-    console.warn("Failed to load sessions from database:", error);
+    log.warn({ err: error }, "Failed to load sessions from database");
     return {};
   }
 }
@@ -88,14 +110,16 @@ export function saveSessionStore(store: SessionStore): void {
       }
     })();
   } catch (error) {
-    console.error("Failed to save sessions to database:", error);
+    log.error({ err: error }, "Failed to save sessions to database");
   }
 }
 export function getOrCreateSession(chatId: string): SessionEntry {
   const db = getDb();
   const sessionKey = `telegram:${chatId}`;
 
-  const row = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as any;
+  const row = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as
+    | SessionRow
+    | undefined;
 
   if (row) {
     return rowToSession(row);
@@ -128,7 +152,7 @@ export function getOrCreateSession(chatId: string): SessionEntry {
     newSession.lastTo
   );
 
-  console.log(`📝 New session created: ${newSession.sessionId} for chat ${chatId}`);
+  log.info(`New session created: ${newSession.sessionId} for chat ${chatId}`);
 
   return newSession;
 }
@@ -139,14 +163,16 @@ export function updateSession(
   const db = getDb();
   const sessionKey = `telegram:${chatId}`;
 
-  const existing = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as any;
+  const existing = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as
+    | SessionRow
+    | undefined;
 
   if (!existing) {
     return getOrCreateSession(chatId);
   }
 
   const updates: string[] = [];
-  const values: any[] = [];
+  const values: unknown[] = [];
 
   if (update.sessionId !== undefined) {
     updates.push("id = ?");
@@ -198,7 +224,9 @@ export function updateSession(
   `
   ).run(...values);
 
-  const updated = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as any;
+  const updated = db
+    .prepare("SELECT * FROM sessions WHERE chat_id = ?")
+    .get(sessionKey) as SessionRow;
   return rowToSession(updated);
 }
 export function incrementMessageCount(chatId: string): void {
@@ -222,7 +250,9 @@ export function incrementMessageCount(chatId: string): void {
 export function getSession(chatId: string): SessionEntry | null {
   const db = getDb();
   const sessionKey = `telegram:${chatId}`;
-  const row = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as any;
+  const row = db.prepare("SELECT * FROM sessions WHERE chat_id = ?").get(sessionKey) as
+    | SessionRow
+    | undefined;
 
   return row ? rowToSession(row) : null;
 }
@@ -254,7 +284,7 @@ export function resetSession(chatId: string): SessionEntry {
   `
   ).run(newSession.sessionId, newSession.createdAt, newSession.updatedAt, sessionKey);
 
-  console.log(`🔄 Session reset: ${oldSession?.sessionId} → ${newSession.sessionId}`);
+  log.info(`Session reset: ${oldSession?.sessionId} → ${newSession.sessionId}`);
 
   return newSession;
 }
@@ -271,8 +301,8 @@ export function shouldResetSession(session: SessionEntry, policy: SessionResetPo
       const resetHour = policy.daily_reset_hour;
 
       if (lastReset < today && currentHour >= resetHour) {
-        console.log(
-          `📅 Daily reset triggered for session ${session.sessionId} (last reset: ${lastReset})`
+        log.info(
+          `Daily reset triggered for session ${session.sessionId} (last reset: ${lastReset})`
         );
         return true;
       }
@@ -285,8 +315,8 @@ export function shouldResetSession(session: SessionEntry, policy: SessionResetPo
     const expiryMinutes = policy.idle_expiry_minutes;
 
     if (idleMinutes >= expiryMinutes) {
-      console.log(
-        `⏱️  Idle expiry triggered for session ${session.sessionId} (idle: ${Math.floor(idleMinutes)}m)`
+      log.info(
+        `Idle expiry triggered for session ${session.sessionId} (idle: ${Math.floor(idleMinutes)}m)`
       );
       return true;
     }

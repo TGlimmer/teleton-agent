@@ -19,6 +19,7 @@ import {
   validateDirectory,
   WorkspaceSecurityError,
 } from "../../workspace/validator.js";
+import { getErrorMessage } from "../../utils/errors.js";
 
 interface FileEntry {
   name: string;
@@ -35,7 +36,7 @@ interface WorkspaceInfo {
 }
 
 function errorResponse(c: any, error: unknown, status: number = 500) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = getErrorMessage(error);
   const code = error instanceof WorkspaceSecurityError ? 403 : status;
   const response: APIResponse = { success: false, error: message };
   return c.json(response, code);

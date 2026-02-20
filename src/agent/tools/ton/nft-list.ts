@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import type { Tool, ToolExecutor, ToolResult } from "../types.js";
 import { tonapiFetch } from "../../../constants/api-endpoints.js";
 import { getWalletAddress } from "../../../ton/wallet-service.js";
+import { getErrorMessage } from "../../../utils/errors.js";
+import { createLogger } from "../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 interface NftListParams {
   address?: string;
@@ -149,10 +153,10 @@ export const nftListExecutor: ToolExecutor<NftListParams> = async (
       },
     };
   } catch (error) {
-    console.error("Error in nft_list:", error);
+    log.error({ err: error }, "Error in nft_list");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

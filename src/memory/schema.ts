@@ -1,5 +1,8 @@
 import type Database from "better-sqlite3";
 import { JOURNAL_SCHEMA } from "../utils/module-db.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Memory");
 
 function compareSemver(a: string, b: string): number {
   const parseVersion = (v: string) => {
@@ -308,7 +311,7 @@ export const CURRENT_SCHEMA_VERSION = "1.11.0";
 export function runMigrations(db: Database.Database): void {
   const currentVersion = getSchemaVersion(db);
   if (!currentVersion || versionLessThan(currentVersion, "1.1.0")) {
-    console.log("📦 Running migration: Adding scheduled task columns...");
+    log.info("Running migration: Adding scheduled task columns...");
 
     try {
       const tableExists = db
@@ -316,7 +319,7 @@ export function runMigrations(db: Database.Database): void {
         .get();
 
       if (!tableExists) {
-        console.log("  Tasks table doesn't exist yet, skipping column migration");
+        log.info("Tasks table doesn't exist yet, skipping column migration");
         setSchemaVersion(db, CURRENT_SCHEMA_VERSION);
         return;
       }
@@ -353,15 +356,15 @@ export function runMigrations(db: Database.Database): void {
         CREATE INDEX IF NOT EXISTS idx_task_deps_parent ON task_dependencies(depends_on_task_id);
       `);
 
-      console.log("✅ Migration 1.1.0 complete: Scheduled tasks support added");
+      log.info("Migration 1.1.0 complete: Scheduled tasks support added");
     } catch (error) {
-      console.error("❌ Migration 1.1.0 failed:", error);
+      log.error({ err: error }, "Migration 1.1.0 failed");
       throw error;
     }
   }
   if (!currentVersion || versionLessThan(currentVersion, "1.2.0")) {
     try {
-      console.log("🔄 Running migration 1.2.0: Extend sessions table for SQLite backend");
+      log.info("Running migration 1.2.0: Extend sessions table for SQLite backend");
 
       // Add missing columns to sessions table
       const addColumnIfNotExists = (table: string, column: string, type: string) => {
@@ -398,14 +401,14 @@ export function runMigrations(db: Database.Database): void {
 
       db.exec("CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated_at DESC)");
 
-      console.log("✅ Migration 1.2.0 complete: Sessions table extended");
+      log.info("Migration 1.2.0 complete: Sessions table extended");
     } catch (error) {
-      console.error("❌ Migration 1.2.0 failed:", error);
+      log.error({ err: error }, "Migration 1.2.0 failed");
       throw error;
     }
   }
   if (!currentVersion || versionLessThan(currentVersion, "1.9.0")) {
-    console.log("🔄 Running migration 1.9.0: Upgrade embedding_cache to BLOB storage");
+    log.info("Running migration 1.9.0: Upgrade embedding_cache to BLOB storage");
     try {
       db.exec(`DROP TABLE IF EXISTS embedding_cache`);
       db.exec(`
@@ -421,15 +424,15 @@ export function runMigrations(db: Database.Database): void {
         );
         CREATE INDEX IF NOT EXISTS idx_embedding_cache_accessed ON embedding_cache(accessed_at);
       `);
-      console.log("✅ Migration 1.9.0 complete: embedding_cache upgraded to BLOB storage");
+      log.info("Migration 1.9.0 complete: embedding_cache upgraded to BLOB storage");
     } catch (error) {
-      console.error("❌ Migration 1.9.0 failed:", error);
+      log.error({ err: error }, "Migration 1.9.0 failed");
       throw error;
     }
   }
 
   if (!currentVersion || versionLessThan(currentVersion, "1.10.0")) {
-    console.log("🔄 Running migration 1.10.0: Add tool_config table for runtime tool management");
+    log.info("Running migration 1.10.0: Add tool_config table for runtime tool management");
     try {
       db.exec(`
         CREATE TABLE IF NOT EXISTS tool_config (
@@ -440,17 +443,15 @@ export function runMigrations(db: Database.Database): void {
           updated_by INTEGER
         );
       `);
-      console.log("✅ Migration 1.10.0 complete: tool_config table created");
+      log.info("Migration 1.10.0 complete: tool_config table created");
     } catch (error) {
-      console.error("❌ Migration 1.10.0 failed:", error);
+      log.error({ err: error }, "Migration 1.10.0 failed");
       throw error;
     }
   }
 
   if (!currentVersion || versionLessThan(currentVersion, "1.10.1")) {
-    console.log(
-      "🔄 Running migration 1.10.1: Fix tool_config scope CHECK constraint (add admin-only)"
-    );
+    log.info("Running migration 1.10.1: Fix tool_config scope CHECK constraint (add admin-only)");
     try {
       db.exec(`
         CREATE TABLE IF NOT EXISTS tool_config_new (
@@ -464,15 +465,15 @@ export function runMigrations(db: Database.Database): void {
         DROP TABLE tool_config;
         ALTER TABLE tool_config_new RENAME TO tool_config;
       `);
-      console.log("✅ Migration 1.10.1 complete: tool_config CHECK constraint updated");
+      log.info("Migration 1.10.1 complete: tool_config CHECK constraint updated");
     } catch (error) {
-      console.error("❌ Migration 1.10.1 failed:", error);
+      log.error({ err: error }, "Migration 1.10.1 failed");
       throw error;
     }
   }
 
   if (!currentVersion || versionLessThan(currentVersion, "1.11.0")) {
-    console.log("🔄 Running migration 1.11.0: Add tool_index tables for Tool RAG");
+    log.info("Running migration 1.11.0: Add tool_index tables for Tool RAG");
     try {
       db.exec(`
         CREATE TABLE IF NOT EXISTS tool_index (
@@ -504,9 +505,9 @@ export function runMigrations(db: Database.Database): void {
           VALUES (new.rowid, new.search_text, new.name);
         END;
       `);
-      console.log("✅ Migration 1.11.0 complete: tool_index tables created");
+      log.info("Migration 1.11.0 complete: tool_index tables created");
     } catch (error) {
-      console.error("❌ Migration 1.11.0 failed:", error);
+      log.error({ err: error }, "Migration 1.11.0 failed");
       throw error;
     }
   }

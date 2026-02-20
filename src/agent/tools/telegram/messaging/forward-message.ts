@@ -1,7 +1,11 @@
-import { randomBytes } from "crypto";
+import { randomLong } from "../../../../utils/gramjs-bigint.js";
 import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for telegram_forward_message tool
@@ -65,7 +69,7 @@ export const telegramForwardMessageExecutor: ToolExecutor<ForwardMessageParams> 
         id: messageIds,
         silent,
         background,
-        randomId: messageIds.map(() => randomBytes(8).readBigUInt64BE() as any),
+        randomId: messageIds.map(() => randomLong()),
       })
     );
 
@@ -78,10 +82,10 @@ export const telegramForwardMessageExecutor: ToolExecutor<ForwardMessageParams> 
       },
     };
   } catch (error) {
-    console.error("Error forwarding Telegram messages:", error);
+    log.error({ err: error }, "Error forwarding Telegram messages");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };

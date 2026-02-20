@@ -38,6 +38,9 @@ import {
 import { parseHtml, stripCustomEmoji } from "./services/html-parser.js";
 import { GramJSBotClient } from "./gramjs-bot.js";
 import { getWalletAddress } from "../ton/wallet-service.js";
+import { createLogger } from "../utils/logger.js";
+
+const log = createLogger("Bot");
 
 export class DealBot {
   private bot: Bot;
@@ -63,7 +66,7 @@ export class DealBot {
       const queryId = ctx.inlineQuery.id;
       const userId = ctx.from.id;
 
-      console.log(`🔍 [Bot] Inline query from ${userId}: "${query}"`);
+      log.info(`🔍 [Bot] Inline query from ${userId}: "${query}"`);
 
       const dealId = query;
 
@@ -120,7 +123,7 @@ export class DealBot {
           await this.answerInlineQueryStyled(queryId, dealId, deal, text, buttons);
           return;
         } catch (error) {
-          console.warn("⚠️ [Bot] GramJS styled answer failed, falling back to Grammy:", error);
+          log.warn({ err: error }, "[Bot] GramJS styled answer failed, falling back to Grammy");
         }
       }
 
@@ -167,9 +170,9 @@ export class DealBot {
               await this.editViaGramJS(inlineMessageId, text, buttons);
               edited = true;
             } catch (error: any) {
-              console.warn(
-                "⚠️ [Bot] chosen_inline_result GramJS edit failed:",
-                error?.errorMessage || error
+              log.warn(
+                { err: error },
+                `[Bot] chosen_inline_result GramJS edit failed: ${error?.errorMessage || error}`
               );
             }
           }
@@ -183,9 +186,9 @@ export class DealBot {
                 reply_markup: keyboard,
               });
             } catch (error: any) {
-              console.error(
-                "❌ [Bot] chosen_inline_result Grammy fallback failed:",
-                error?.description || error
+              log.error(
+                { err: error },
+                `[Bot] chosen_inline_result Grammy fallback failed: ${error?.description || error}`
               );
             }
           }
@@ -203,7 +206,7 @@ export class DealBot {
       const userId = ctx.from.id;
       const { action, dealId } = data;
 
-      console.log(`🔘 [Bot] Callback from ${userId}: ${action} on deal ${dealId}`);
+      log.info(`🔘 [Bot] Callback from ${userId}: ${action} on deal ${dealId}`);
 
       const inlineMsgId = ctx.callbackQuery.inline_message_id;
       if (inlineMsgId) {
@@ -256,7 +259,7 @@ export class DealBot {
     });
 
     this.bot.catch((err) => {
-      console.error("❌ [Bot] Error:", err);
+      log.error({ err }, "[Bot] Error");
     });
   }
 
@@ -313,7 +316,7 @@ export class DealBot {
     await this.editInlineMessage(ctx, text, buttons);
     await ctx.answerCallbackQuery({ text: "✅ Deal accepted!" });
 
-    console.log(`✅ [Bot] Deal ${deal.dealId} accepted by ${deal.userId}`);
+    log.info(`✅ [Bot] Deal ${deal.dealId} accepted by ${deal.userId}`);
   }
 
   private async handleDecline(ctx: any, deal: DealContext): Promise<void> {
@@ -330,7 +333,7 @@ export class DealBot {
     await this.editInlineMessage(ctx, text, buttons);
     await ctx.answerCallbackQuery({ text: "❌ Deal declined" });
 
-    console.log(`❌ [Bot] Deal ${deal.dealId} declined by ${deal.userId}`);
+    log.info(`❌ [Bot] Deal ${deal.dealId} declined by ${deal.userId}`);
   }
 
   private async handleSent(ctx: any, deal: DealContext): Promise<void> {
@@ -347,7 +350,7 @@ export class DealBot {
     await this.editInlineMessage(ctx, text, buttons);
     await ctx.answerCallbackQuery({ text: "⏳ Verifying..." });
 
-    console.log(`📤 [Bot] Deal ${deal.dealId} payment claimed by ${deal.userId}`);
+    log.info(`📤 [Bot] Deal ${deal.dealId} payment claimed by ${deal.userId}`);
   }
 
   private async handleCopyAddress(ctx: any): Promise<void> {
@@ -395,9 +398,9 @@ export class DealBot {
         return;
       } catch (error: any) {
         if (error?.errorMessage === "MESSAGE_NOT_MODIFIED") return;
-        console.warn(
-          "⚠️ [Bot] GramJS edit failed, falling back to Grammy:",
-          error?.errorMessage || error
+        log.warn(
+          { err: error },
+          `[Bot] GramJS edit failed, falling back to Grammy: ${error?.errorMessage || error}`
         );
       }
     }
@@ -411,7 +414,7 @@ export class DealBot {
       });
     } catch (error: any) {
       if (error?.description?.includes("message is not modified")) return;
-      console.error("❌ [Bot] Failed to edit inline message:", error);
+      log.error({ err: error }, "[Bot] Failed to edit inline message");
     }
   }
 
@@ -426,9 +429,9 @@ export class DealBot {
         return;
       } catch (error: any) {
         if (error?.errorMessage === "MESSAGE_NOT_MODIFIED") return;
-        console.warn(
-          "⚠️ [Bot] GramJS edit failed, falling back to Grammy:",
-          error?.errorMessage || error
+        log.warn(
+          { err: error },
+          `[Bot] GramJS edit failed, falling back to Grammy: ${error?.errorMessage || error}`
         );
       }
     }
@@ -441,7 +444,7 @@ export class DealBot {
         reply_markup: keyboard,
       });
     } catch (error) {
-      console.error("❌ [Bot] Failed to edit message by inline ID:", error);
+      log.error({ err: error }, "[Bot] Failed to edit message by inline ID");
     }
   }
 
@@ -479,14 +482,14 @@ export class DealBot {
    * Start the bot (non-blocking - long polling runs in background)
    */
   async start(): Promise<void> {
-    console.log(`🤖 [Bot] Starting @${this.config.username}...`);
+    log.info(`🤖 [Bot] Starting @${this.config.username}...`);
 
     // Connect GramJS bot for styled buttons (best-effort)
     if (this.gramjsBot) {
       try {
         await this.gramjsBot.connect(this.config.token);
       } catch {
-        console.warn("⚠️ [Bot] GramJS MTProto connection failed, buttons will be unstyled");
+        log.warn("⚠️ [Bot] GramJS MTProto connection failed, buttons will be unstyled");
         this.gramjsBot = null;
       }
     }
@@ -496,10 +499,10 @@ export class DealBot {
     // bot.start() launches long polling - do NOT await (it blocks forever)
     this.bot
       .start({
-        onStart: () => console.log(`🤖 [Bot] @${this.config.username} polling started`),
+        onStart: () => log.info(`🤖 [Bot] @${this.config.username} polling started`),
       })
       .catch((err) => {
-        console.error(`❌ [Bot] Polling error:`, err);
+        log.error({ err }, "[Bot] Polling error");
       });
   }
 
@@ -507,7 +510,7 @@ export class DealBot {
    * Stop the bot
    */
   async stop(): Promise<void> {
-    console.log(`🛑 [Bot] Stopping @${this.config.username}...`);
+    log.info(`🛑 [Bot] Stopping @${this.config.username}...`);
     await this.bot.stop();
     if (this.gramjsBot) {
       await this.gramjsBot.disconnect();

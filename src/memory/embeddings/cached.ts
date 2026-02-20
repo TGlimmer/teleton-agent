@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import type { EmbeddingProvider } from "./provider.js";
 import { hashText, serializeEmbedding, deserializeEmbedding } from "./index.js";
+import { createLogger } from "../../utils/logger.js";
 import {
   EMBEDDING_CACHE_MAX_ENTRIES,
   EMBEDDING_CACHE_TTL_DAYS,
@@ -17,6 +18,7 @@ export class CachedEmbeddingProvider implements EmbeddingProvider {
   readonly model: string;
   readonly dimensions: number;
 
+  private static readonly log = createLogger("Memory");
   private hits = 0;
   private misses = 0;
   private ops = 0;
@@ -131,8 +133,8 @@ export class CachedEmbeddingProvider implements EmbeddingProvider {
     const total = this.hits + this.misses;
     if (total > 0 && total % 100 === 0) {
       const rate = ((this.hits / total) * 100).toFixed(0);
-      console.log(
-        `📊 Embedding cache: ${this.hits} hits, ${this.misses} misses (${rate}% hit rate)`
+      CachedEmbeddingProvider.log.info(
+        `Embedding cache: ${this.hits} hits, ${this.misses} misses (${rate}% hit rate)`
       );
     }
   }
@@ -157,10 +159,12 @@ export class CachedEmbeddingProvider implements EmbeddingProvider {
             )`
           )
           .run(toDelete);
-        console.log(`🧹 Embedding cache eviction: removed ${toDelete} entries (${count} total)`);
+        CachedEmbeddingProvider.log.info(
+          `Embedding cache eviction: removed ${toDelete} entries (${count} total)`
+        );
       }
     } catch (err) {
-      console.warn("⚠️ Embedding cache eviction error:", err);
+      CachedEmbeddingProvider.log.warn({ err }, "Embedding cache eviction error");
     }
   }
 }

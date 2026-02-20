@@ -2,6 +2,10 @@ import { Type } from "@sinclair/typebox";
 import { Api } from "telegram";
 import bigInt from "big-integer";
 import type { Tool, ToolExecutor, ToolResult } from "../../types.js";
+import { getErrorMessage } from "../../../../utils/errors.js";
+import { createLogger } from "../../../../utils/logger.js";
+
+const log = createLogger("Tools");
 
 /**
  * Parameters for setting a collectible gift as emoji status
@@ -70,9 +74,7 @@ export const telegramSetGiftStatusExecutor: ToolExecutor<SetGiftStatusParams> = 
     );
 
     const action = clear ? "cleared" : "set";
-    console.log(
-      `✨ Emoji status ${action}${collectibleId ? ` (collectible: ${collectibleId})` : ""}`
-    );
+    log.info(`Emoji status ${action}${collectibleId ? ` (collectible: ${collectibleId})` : ""}`);
 
     return {
       success: true,
@@ -83,10 +85,10 @@ export const telegramSetGiftStatusExecutor: ToolExecutor<SetGiftStatusParams> = 
       },
     };
   } catch (error) {
-    console.error("Error setting gift status:", error);
+    log.error({ err: error }, "Error setting gift status");
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     };
   }
 };
