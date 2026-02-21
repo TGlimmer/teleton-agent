@@ -17,6 +17,11 @@ export async function sendTon(params: SendTonParams): Promise<string | null> {
   try {
     const { toAddress, amount, comment = "", bounce = false } = params;
 
+    if (!Number.isFinite(amount) || amount <= 0) {
+      log.error({ amount }, "Invalid transfer amount");
+      return null;
+    }
+
     let recipientAddress: Address;
     try {
       recipientAddress = Address.parse(toAddress);
@@ -45,7 +50,7 @@ export async function sendTon(params: SendTonParams): Promise<string | null> {
     await contract.sendTransfer({
       seqno,
       secretKey: keyPair.secretKey,
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
       messages: [
         internal({
           to: recipientAddress,

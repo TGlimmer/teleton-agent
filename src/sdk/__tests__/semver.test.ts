@@ -122,44 +122,44 @@ describe("semverSatisfies", () => {
     });
   });
 
-  describe("malformed current version", () => {
-    it("returns true for 'abc'", () => {
-      expect(semverSatisfies("abc", "1.0.0")).toBe(true);
+  describe("malformed current version (fail-closed)", () => {
+    it("returns false for 'abc'", () => {
+      expect(semverSatisfies("abc", "1.0.0")).toBe(false);
     });
 
-    it("returns true for empty string", () => {
-      expect(semverSatisfies("", "1.0.0")).toBe(true);
+    it("returns false for empty string", () => {
+      expect(semverSatisfies("", "1.0.0")).toBe(false);
     });
 
-    it("returns true for partial version '1.2'", () => {
-      expect(semverSatisfies("1.2", "1.0.0")).toBe(true);
+    it("returns false for partial version '1.2'", () => {
+      expect(semverSatisfies("1.2", "1.0.0")).toBe(false);
     });
   });
 
-  describe("malformed range", () => {
-    it("returns true for '>=abc'", () => {
-      expect(semverSatisfies("1.0.0", ">=abc")).toBe(true);
+  describe("malformed range (fail-closed)", () => {
+    it("returns false for '>=abc'", () => {
+      expect(semverSatisfies("1.0.0", ">=abc")).toBe(false);
     });
 
-    it("returns true for '^' alone", () => {
-      expect(semverSatisfies("1.0.0", "^")).toBe(true);
+    it("returns false for '^' alone", () => {
+      expect(semverSatisfies("1.0.0", "^")).toBe(false);
     });
 
-    it("returns true for '~1.0.0' (tilde not supported)", () => {
+    it("returns true for '~1.0.0' (tilde not supported but parseable)", () => {
       // parseSemver("1.0.0") from "~1.0.0" — tilde is not handled,
       // falls through to exact match path, which parses "~1.0.0" as-is.
       // parseSemver will try to match \d+\.\d+\.\d+ in "~1.0.0" — it finds "1.0.0".
-      // So this becomes an exact match check, NOT a malformed skip.
+      // So this becomes an exact match check, NOT a malformed rejection.
       expect(semverSatisfies("1.0.0", "~1.0.0")).toBe(true);
       expect(semverSatisfies("1.0.1", "~1.0.0")).toBe(false);
     });
 
-    it("returns true for empty range", () => {
-      expect(semverSatisfies("1.0.0", "")).toBe(true);
+    it("returns false for empty range", () => {
+      expect(semverSatisfies("1.0.0", "")).toBe(false);
     });
 
-    it("returns true for completely invalid range", () => {
-      expect(semverSatisfies("1.0.0", "not-a-version")).toBe(true);
+    it("returns false for completely invalid range", () => {
+      expect(semverSatisfies("1.0.0", "not-a-version")).toBe(false);
     });
   });
 

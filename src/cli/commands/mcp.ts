@@ -58,9 +58,9 @@ export async function mcpAddCommand(
     // Treat pkg as a URL
     entry.url = pkg;
   } else {
-    // Build stdio command: "npx -y <pkg> [args...]"
-    const cmdParts = ["npx", "-y", pkg, ...extraArgs];
-    entry.command = cmdParts.join(" ");
+    // Store command and args separately to preserve arguments with spaces
+    entry.command = "npx";
+    entry.args = ["-y", pkg, ...extraArgs];
   }
 
   if (options.scope && options.scope !== "always") {

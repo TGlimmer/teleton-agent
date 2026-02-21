@@ -118,6 +118,23 @@ const rootLogger = pino(
     level: initialLevel,
     timestamp: pino.stdTimeFunctions.isoTime,
     base: null, // no pid/hostname noise
+    redact: {
+      paths: [
+        "apiKey",
+        "api_key",
+        "password",
+        "secret",
+        "token",
+        "mnemonic",
+        "*.apiKey",
+        "*.api_key",
+        "*.password",
+        "*.secret",
+        "*.token",
+        "*.mnemonic",
+      ],
+      censor: "[REDACTED]",
+    },
   },
   multiStream
 );

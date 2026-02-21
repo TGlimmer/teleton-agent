@@ -5,7 +5,7 @@ function escapeHtml(text: string): string {
 function sanitizeUrl(url: string): string {
   const trimmed = url.trim().toLowerCase();
   if (/^(javascript|data|vbscript|file):/i.test(trimmed)) return "#";
-  return url;
+  return url.replace(/"/g, "&quot;");
 }
 
 export function markdownToTelegramHtml(markdown: string): string {

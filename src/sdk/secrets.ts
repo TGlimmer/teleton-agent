@@ -40,7 +40,7 @@ function readSecretsFile(pluginName: string): Record<string, string> {
  * Used by admin commands (/plugin set).
  */
 export function writePluginSecret(pluginName: string, key: string, value: string): void {
-  mkdirSync(SECRETS_DIR, { recursive: true });
+  mkdirSync(SECRETS_DIR, { recursive: true, mode: 0o700 });
   const filePath = getSecretsPath(pluginName);
   const existing = readSecretsFile(pluginName);
   existing[key] = value;

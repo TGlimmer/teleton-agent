@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "fs";
 import { readRecentMemory } from "../memory/daily-logs.js";
 import { WORKSPACE_PATHS } from "../workspace/index.js";
-import { sanitizeForPrompt } from "../utils/sanitize.js";
+import { sanitizeForPrompt, sanitizeForContext } from "../utils/sanitize.js";
 
 const SOUL_PATHS = [WORKSPACE_PATHS.SOUL];
 
@@ -92,12 +92,12 @@ export function loadMemoryContext(): string | null {
 
   const persistentMemory = loadPersistentMemory();
   if (persistentMemory) {
-    parts.push(`## Persistent Memory\n\n${persistentMemory}`);
+    parts.push(`## Persistent Memory\n\n${sanitizeForContext(persistentMemory)}`);
   }
 
   const recentMemory = readRecentMemory();
   if (recentMemory) {
-    parts.push(recentMemory);
+    parts.push(sanitizeForContext(recentMemory));
   }
 
   if (parts.length === 0) {

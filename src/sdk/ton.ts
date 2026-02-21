@@ -358,7 +358,9 @@ export function createTonSDK(log: PluginLogger, db: Database.Database | null): T
       const senderJettonWallet = jettonBalance.wallet_address.address;
       const decimals = jettonBalance.jetton.decimals || 9;
       const currentBalance = BigInt(jettonBalance.balance);
-      const amountInUnits = BigInt(Math.floor(amount * 10 ** decimals));
+      const amountStr = amount.toFixed(decimals);
+      const [whole, frac = ""] = amountStr.split(".");
+      const amountInUnits = BigInt(whole + (frac + "0".repeat(decimals)).slice(0, decimals));
 
       if (amountInUnits > currentBalance) {
         throw new PluginSDKError(

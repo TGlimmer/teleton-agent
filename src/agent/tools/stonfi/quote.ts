@@ -57,7 +57,11 @@ export const stonfiQuoteExecutor: ToolExecutor<JettonQuoteParams> = async (
     // Fetch decimals for accurate conversion (TON=9, USDT=6, WBTC=8, etc.)
     const fromAssetInfo = await stonApiClient.getAsset(fromAddress);
     const fromDecimals = fromAssetInfo?.decimals ?? 9;
-    const offerUnits = BigInt(Math.round(amount * 10 ** fromDecimals)).toString();
+    const amountStr = amount.toFixed(fromDecimals);
+    const [whole, frac = ""] = amountStr.split(".");
+    const offerUnits = BigInt(
+      whole + (frac + "0".repeat(fromDecimals)).slice(0, fromDecimals)
+    ).toString();
 
     const simulationResult = await stonApiClient.simulateSwap({
       offerAddress: fromAddress,

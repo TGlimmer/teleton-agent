@@ -164,6 +164,7 @@ export function createTelegramSDK(bridge: TelegramBridge, log: PluginLogger): Te
     },
 
     getRawClient(): unknown | null {
+      log.warn("getRawClient() called — this bypasses SDK sandbox guarantees");
       if (!bridge.isAvailable()) return null;
       try {
         return bridge.getClient().getClient();

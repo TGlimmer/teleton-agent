@@ -38,6 +38,7 @@ export class PluginWatcher {
   private watcher: ReturnType<typeof chokidar.watch> | null = null;
   private reloadTimers = new Map<string, NodeJS.Timeout>();
   private reloading = false;
+  private pendingReloads = new Set<string>();
   private deps: PluginWatcherDeps;
   private pluginsDir: string;
 
@@ -163,7 +164,8 @@ export class PluginWatcher {
 
   private async reloadPlugin(pluginName: string): Promise<boolean> {
     if (this.reloading) {
-      log.warn(`Reload already in progress, skipping "${pluginName}"`);
+      log.warn(`Reload already in progress, queuing "${pluginName}"`);
+      this.pendingReloads.add(pluginName);
       return false;
     }
 
@@ -277,6 +279,14 @@ export class PluginWatcher {
       return false;
     } finally {
       this.reloading = false;
+      // Process any queued reloads
+      if (this.pendingReloads.size > 0) {
+        const next = this.pendingReloads.values().next().value;
+        if (next) {
+          this.pendingReloads.delete(next);
+          this.scheduleReload(next);
+        }
+      }
     }
   }
 }

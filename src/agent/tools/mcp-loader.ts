@@ -71,10 +71,27 @@ export async function loadMcpServers(config: McpConfig): Promise<McpConnection[]
           if (process.env[key]) safeEnv[key] = process.env[key]!;
         }
 
+        // Block dangerous env vars that could enable code injection
+        const BLOCKED_ENV_KEYS = new Set([
+          "LD_PRELOAD",
+          "NODE_OPTIONS",
+          "LD_LIBRARY_PATH",
+          "DYLD_INSERT_LIBRARIES",
+          "ELECTRON_RUN_AS_NODE",
+        ]);
+        const filteredEnv: Record<string, string> = {};
+        for (const [k, v] of Object.entries(serverConfig.env ?? {})) {
+          if (BLOCKED_ENV_KEYS.has(k.toUpperCase())) {
+            log.warn({ key: k, server: name }, "Blocked dangerous env var for MCP server");
+          } else {
+            filteredEnv[k] = v;
+          }
+        }
+
         transport = new StdioClientTransport({
           command,
           args,
-          env: { ...safeEnv, ...serverConfig.env },
+          env: { ...safeEnv, ...filteredEnv },
           stderr: "pipe",
         });
       } else if (serverConfig.url) {
@@ -166,14 +183,22 @@ export async function registerMcpTools(
           }
         };
 
+        const schema = mcpTool.inputSchema ?? { type: "object", properties: {} };
+        if (
+          !schema.properties ||
+          Object.keys(schema.properties as Record<string, unknown>).length === 0
+        ) {
+          log.warn(
+            { tool: mcpTool.name, server: conn.serverName },
+            "MCP tool has no parameter schema — inputs will not be validated"
+          );
+        }
+
         registryTools.push({
           tool: {
             name: prefixedName,
             description: mcpTool.description || `MCP tool from ${conn.serverName}`,
-            parameters: (mcpTool.inputSchema ?? {
-              type: "object",
-              properties: {},
-            }) as unknown as Tool["parameters"],
+            parameters: schema as unknown as Tool["parameters"],
           },
           executor,
           scope: conn.scope,

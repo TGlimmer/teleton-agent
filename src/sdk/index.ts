@@ -63,16 +63,45 @@ export interface CreatePluginSDKOptions {
   pluginConfig: Record<string, unknown>;
 }
 
+/** Block ATTACH/DETACH to prevent cross-plugin DB access */
+const BLOCKED_SQL_RE = /\b(ATTACH|DETACH)\s+DATABASE\b/i;
+
+function createSafeDb(db: Database.Database): Database.Database {
+  return new Proxy(db, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (prop === "exec") {
+        return (sql: string) => {
+          if (BLOCKED_SQL_RE.test(sql)) {
+            throw new Error("ATTACH/DETACH DATABASE is not allowed in plugin context");
+          }
+          return target.exec(sql);
+        };
+      }
+      if (prop === "prepare") {
+        return (sql: string) => {
+          if (BLOCKED_SQL_RE.test(sql)) {
+            throw new Error("ATTACH/DETACH DATABASE is not allowed in plugin context");
+          }
+          return target.prepare(sql);
+        };
+      }
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
 export function createPluginSDK(deps: SDKDependencies, opts: CreatePluginSDKOptions): PluginSDK {
   const log = createLogger(opts.pluginName);
 
-  const ton = Object.freeze(createTonSDK(log, opts.db));
+  const safeDb = opts.db ? createSafeDb(opts.db) : null;
+  const ton = Object.freeze(createTonSDK(log, safeDb));
   const telegram = Object.freeze(createTelegramSDK(deps.bridge, log));
   const secrets = Object.freeze(createSecretsSDK(opts.pluginName, opts.pluginConfig, log));
-  const storage = opts.db ? Object.freeze(createStorageSDK(opts.db)) : null;
+  const storage = safeDb ? Object.freeze(createStorageSDK(safeDb)) : null;
   const frozenLog = Object.freeze(log);
   const frozenConfig = Object.freeze(opts.sanitizedConfig);
-  const frozenPluginConfig = Object.freeze(opts.pluginConfig);
+  const frozenPluginConfig = Object.freeze(JSON.parse(JSON.stringify(opts.pluginConfig ?? {})));
 
   return Object.freeze({
     version: SDK_VERSION,
@@ -80,7 +109,7 @@ export function createPluginSDK(deps: SDKDependencies, opts: CreatePluginSDKOpti
     telegram,
     secrets,
     storage,
-    db: opts.db,
+    db: safeDb,
     config: frozenConfig,
     pluginConfig: frozenPluginConfig,
     log: frozenLog,
@@ -122,15 +151,15 @@ function semverGte(a: SemVer, b: SemVer): boolean {
 export function semverSatisfies(current: string, range: string): boolean {
   const cur = parseSemver(current);
   if (!cur) {
-    sdkLog.warn(`[SDK] Could not parse current version "${current}", skipping check`);
-    return true;
+    sdkLog.warn(`[SDK] Could not parse current version "${current}", rejecting`);
+    return false;
   }
 
   if (range.startsWith(">=")) {
     const req = parseSemver(range.slice(2));
     if (!req) {
-      sdkLog.warn(`[SDK] Malformed sdkVersion range "${range}", skipping check`);
-      return true;
+      sdkLog.warn(`[SDK] Malformed sdkVersion range "${range}", rejecting`);
+      return false;
     }
     return semverGte(cur, req);
   }
@@ -138,8 +167,8 @@ export function semverSatisfies(current: string, range: string): boolean {
   if (range.startsWith("^")) {
     const req = parseSemver(range.slice(1));
     if (!req) {
-      sdkLog.warn(`[SDK] Malformed sdkVersion range "${range}", skipping check`);
-      return true;
+      sdkLog.warn(`[SDK] Malformed sdkVersion range "${range}", rejecting`);
+      return false;
     }
     if (req.major === 0) {
       return cur.major === 0 && cur.minor === req.minor && semverGte(cur, req);
@@ -149,8 +178,8 @@ export function semverSatisfies(current: string, range: string): boolean {
 
   const req = parseSemver(range);
   if (!req) {
-    sdkLog.warn(`[SDK] Malformed sdkVersion "${range}", skipping check`);
-    return true;
+    sdkLog.warn(`[SDK] Malformed sdkVersion "${range}", rejecting`);
+    return false;
   }
   return cur.major === req.major && cur.minor === req.minor && cur.patch === req.patch;
 }

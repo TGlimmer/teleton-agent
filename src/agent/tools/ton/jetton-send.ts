@@ -95,8 +95,10 @@ export const jettonSendExecutor: ToolExecutor<JettonSendParams> = async (
     const symbol = jettonBalance.jetton.symbol || "JETTON";
     const currentBalance = BigInt(jettonBalance.balance);
 
-    // Convert amount to blockchain units
-    const amountInUnits = BigInt(Math.floor(amount * 10 ** decimals));
+    // Convert amount to blockchain units (string-based to avoid float precision loss)
+    const amountStr = amount.toFixed(decimals);
+    const [whole, frac = ""] = amountStr.split(".");
+    const amountInUnits = BigInt(whole + (frac + "0".repeat(decimals)).slice(0, decimals));
 
     // Check sufficient balance
     if (amountInUnits > currentBalance) {

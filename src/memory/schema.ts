@@ -453,18 +453,20 @@ export function runMigrations(db: Database.Database): void {
   if (!currentVersion || versionLessThan(currentVersion, "1.10.1")) {
     log.info("Running migration 1.10.1: Fix tool_config scope CHECK constraint (add admin-only)");
     try {
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS tool_config_new (
-          tool_name TEXT PRIMARY KEY,
-          enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
-          scope TEXT CHECK(scope IN ('always', 'dm-only', 'group-only', 'admin-only')),
-          updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
-          updated_by INTEGER
-        );
-        INSERT OR IGNORE INTO tool_config_new SELECT * FROM tool_config;
-        DROP TABLE tool_config;
-        ALTER TABLE tool_config_new RENAME TO tool_config;
-      `);
+      db.transaction(() => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS tool_config_new (
+            tool_name TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+            scope TEXT CHECK(scope IN ('always', 'dm-only', 'group-only', 'admin-only')),
+            updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+            updated_by INTEGER
+          );
+          INSERT OR IGNORE INTO tool_config_new SELECT * FROM tool_config;
+          DROP TABLE tool_config;
+          ALTER TABLE tool_config_new RENAME TO tool_config;
+        `);
+      })();
       log.info("Migration 1.10.1 complete: tool_config CHECK constraint updated");
     } catch (error) {
       log.error({ err: error }, "Migration 1.10.1 failed");

@@ -87,12 +87,18 @@ export function loadConfig(configPath: string = DEFAULT_CONFIG_PATH): Config {
   }
   if (process.env.TELETON_WEBUI_PORT) {
     const port = parseInt(process.env.TELETON_WEBUI_PORT, 10);
-    if (!isNaN(port)) {
+    if (!isNaN(port) && port >= 1024 && port <= 65535) {
       config.webui.port = port;
     }
   }
   if (process.env.TELETON_WEBUI_HOST) {
     config.webui.host = process.env.TELETON_WEBUI_HOST;
+    if (!["127.0.0.1", "localhost", "::1"].includes(config.webui.host)) {
+      log.warn(
+        { host: config.webui.host },
+        "WebUI bound to non-loopback address — ensure auth_token is set"
+      );
+    }
   }
 
   // Optional API key overrides

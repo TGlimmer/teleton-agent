@@ -680,7 +680,29 @@ export function createTelegramSocialSDK(bridge: TelegramBridge, log: PluginLogge
         const { readFileSync, statSync } = await import("fs");
         const { basename } = await import("path");
 
-        const filePath = mediaPath;
+        const { resolve, normalize } = await import("path");
+        const { homedir } = await import("os");
+        const { realpathSync } = await import("fs");
+
+        const filePath = realpathSync(resolve(normalize(mediaPath)));
+        const home = homedir();
+        const teletonWorkspace = `${home}/.teleton/workspace/`;
+        const allowedPrefixes = [
+          "/tmp/",
+          `${home}/Downloads/`,
+          `${home}/Pictures/`,
+          `${home}/Videos/`,
+          `${teletonWorkspace}uploads/`,
+          `${teletonWorkspace}downloads/`,
+          `${teletonWorkspace}memes/`,
+        ];
+        if (!allowedPrefixes.some((p) => filePath.startsWith(p))) {
+          throw new PluginSDKError(
+            "sendStory: media path must be within /tmp, Downloads, Pictures, or Videos",
+            "OPERATION_FAILED"
+          );
+        }
+
         const fileName = basename(filePath);
         const fileSize = statSync(filePath).size;
         const fileBuffer = readFileSync(filePath);

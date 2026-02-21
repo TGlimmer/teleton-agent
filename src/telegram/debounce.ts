@@ -83,12 +83,18 @@ export class MessageDebouncer {
       clearTimeout(buffer.timer);
     }
 
+    // Clamp delay so total wait never exceeds maxDebounceMs
+    const firstMsgTime = buffer.messages[0]?.timestamp?.getTime() ?? Date.now();
+    const elapsed = Date.now() - firstMsgTime;
+    const remaining = Math.max(0, this.maxDebounceMs - elapsed);
+    const delay = Math.min(this.config.debounceMs, remaining);
+
     buffer.timer = setTimeout(() => {
       this.flushKey(key).catch((error) => {
         log.error({ err: error }, `Debouncer flush error for chat ${key}`);
         this.onError?.(error, buffer.messages);
       });
-    }, this.config.debounceMs);
+    }, delay);
 
     buffer.timer.unref?.();
   }

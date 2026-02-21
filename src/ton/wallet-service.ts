@@ -83,7 +83,11 @@ export function loadWallet(): WalletData | null {
 
   try {
     const content = readFileSync(WALLET_FILE, "utf-8");
-    _walletCache = JSON.parse(content) as WalletData;
+    const parsed = JSON.parse(content);
+    if (!parsed.mnemonic || !Array.isArray(parsed.mnemonic) || parsed.mnemonic.length !== 24) {
+      throw new Error("Invalid wallet.json: mnemonic must be a 24-word array");
+    }
+    _walletCache = parsed as WalletData;
     return _walletCache;
   } catch (error) {
     log.error({ err: error }, "Failed to load wallet");
