@@ -31,9 +31,9 @@ export { telegramSetChatPhotoTool, telegramSetChatPhotoExecutor };
 export const tools: ToolEntry[] = [
   { tool: telegramGetMeTool, executor: telegramGetMeExecutor },
   { tool: telegramGetParticipantsTool, executor: telegramGetParticipantsExecutor },
-  { tool: telegramKickUserTool, executor: telegramKickUserExecutor, scope: "group-only" },
-  { tool: telegramBanUserTool, executor: telegramBanUserExecutor, scope: "group-only" },
-  { tool: telegramUnbanUserTool, executor: telegramUnbanUserExecutor, scope: "group-only" },
+  { tool: telegramKickUserTool, executor: telegramKickUserExecutor, scope: "admin-only" },
+  { tool: telegramBanUserTool, executor: telegramBanUserExecutor, scope: "admin-only" },
+  { tool: telegramUnbanUserTool, executor: telegramUnbanUserExecutor, scope: "admin-only" },
   { tool: telegramCreateGroupTool, executor: telegramCreateGroupExecutor, scope: "dm-only" },
   { tool: telegramSetChatPhotoTool, executor: telegramSetChatPhotoExecutor, scope: "group-only" },
 ];

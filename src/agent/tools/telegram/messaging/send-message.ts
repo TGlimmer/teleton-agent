@@ -48,6 +48,13 @@ export const telegramSendMessageExecutor: ToolExecutor<SendMessageParams> = asyn
   try {
     const { chatId, text, replyToId } = params;
 
+    // Cross-chat restriction: non-admin users can only send to the current chat
+    const adminIds = context.config?.telegram?.admin_ids ?? [];
+    const isAdmin = adminIds.includes(Number(context.senderId));
+    if (!isAdmin && chatId !== context.chatId) {
+      return { success: false, error: "⛔ You can only send messages in the current chat." };
+    }
+
     // Send message via Telegram bridge
     const sentMessage = await context.bridge.sendMessage({
       chatId,

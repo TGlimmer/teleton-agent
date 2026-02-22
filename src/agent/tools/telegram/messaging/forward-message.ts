@@ -58,6 +58,13 @@ export const telegramForwardMessageExecutor: ToolExecutor<ForwardMessageParams> 
   try {
     const { fromChatId, toChatId, messageIds, silent = false, background = false } = params;
 
+    // Cross-chat restriction: non-admin users can only forward to the current chat
+    const adminIds = context.config?.telegram?.admin_ids ?? [];
+    const isAdmin = adminIds.includes(Number(context.senderId));
+    if (!isAdmin && toChatId !== context.chatId) {
+      return { success: false, error: "⛔ You can only forward messages to the current chat." };
+    }
+
     // Get underlying GramJS client
     const gramJsClient = context.bridge.getClient().getClient();
 

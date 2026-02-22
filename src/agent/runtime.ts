@@ -308,7 +308,7 @@ export class AgentRuntime {
         ownerName: this.config.telegram.owner_name,
         ownerUsername: this.config.telegram.owner_username,
         context: additionalContext,
-        includeMemory: !isGroup,
+        includeMemory: true,
         includeStrategy: !isGroup,
         memoryFlushWarning: needsMemoryFlush,
       });
@@ -569,6 +569,21 @@ export class AgentRuntime {
         }
 
         log.info(`🔄 ${iteration}/${maxIterations} → ${iterationToolNames.join(", ")}`);
+
+        // After a Telegram send tool is called, remove send tools from subsequent iterations.
+        // Allows follow-up actions (memory, reactions, edits) but prevents multiple messages.
+        if (tools) {
+          const hasSentMessage = totalToolCalls.some((tc) => TELEGRAM_SEND_TOOLS.has(tc.name));
+          if (hasSentMessage) {
+            const beforeCount = tools.length;
+            tools = tools.filter((t) => !TELEGRAM_SEND_TOOLS.has(t.name));
+            if (tools.length < beforeCount) {
+              log.debug(
+                `🔒 Filtered ${beforeCount - tools.length} send tools after message delivery`
+              );
+            }
+          }
+        }
 
         if (iteration === maxIterations) {
           log.info(`⚠️ Max iterations reached (${maxIterations})`);

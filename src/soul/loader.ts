@@ -9,6 +9,8 @@ const STRATEGY_PATHS = [WORKSPACE_PATHS.STRATEGY];
 
 const SECURITY_PATHS = [WORKSPACE_PATHS.SECURITY];
 
+const IDENTITY_PATH = WORKSPACE_PATHS.IDENTITY;
+const USER_PATH = WORKSPACE_PATHS.USER;
 const MEMORY_PATH = WORKSPACE_PATHS.MEMORY;
 
 const DEFAULT_SOUL = `# Teleton AI
@@ -122,6 +124,16 @@ export function buildSystemPrompt(options: {
 }): string {
   const soul = options.soul ?? loadSoul();
   const parts = [soul];
+
+  const identity = cachedReadFile(IDENTITY_PATH);
+  if (identity) {
+    parts.push(`\n${identity}`);
+  }
+
+  const userProfile = cachedReadFile(USER_PATH);
+  if (userProfile) {
+    parts.push(`\n${userProfile}`);
+  }
 
   const security = loadSecurity();
   if (security) {
