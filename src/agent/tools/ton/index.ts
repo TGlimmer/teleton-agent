@@ -6,6 +6,12 @@ import { tonGetTransactionsTool, tonGetTransactionsExecutor } from "./get-transa
 import { tonMyTransactionsTool, tonMyTransactionsExecutor } from "./my-transactions.js";
 import { tonChartTool, tonChartExecutor } from "./chart.js";
 import { nftListTool, nftListExecutor } from "./nft-list.js";
+import { nftDetailTool, nftDetailExecutor } from "./nft-detail.js";
+import { nftTransferTool, nftTransferExecutor } from "./nft-transfer.js";
+import { nftCollectionInfoTool, nftCollectionInfoExecutor } from "./nft-collection-info.js";
+import { nftHistoryTool, nftHistoryExecutor } from "./nft-history.js";
+import { nftCollectionItemsTool, nftCollectionItemsExecutor } from "./nft-collection-items.js";
+import { nftOnSaleTool, nftOnSaleExecutor } from "./nft-on-sale.js";
 import { jettonSendTool, jettonSendExecutor } from "./jetton-send.js";
 import { jettonBalancesTool, jettonBalancesExecutor } from "./jetton-balances.js";
 import { jettonInfoTool, jettonInfoExecutor } from "./jetton-info.js";
@@ -23,6 +29,12 @@ export { tonGetTransactionsTool, tonGetTransactionsExecutor };
 export { tonMyTransactionsTool, tonMyTransactionsExecutor };
 export { tonChartTool, tonChartExecutor };
 export { nftListTool, nftListExecutor };
+export { nftDetailTool, nftDetailExecutor };
+export { nftTransferTool, nftTransferExecutor };
+export { nftCollectionInfoTool, nftCollectionInfoExecutor };
+export { nftHistoryTool, nftHistoryExecutor };
+export { nftCollectionItemsTool, nftCollectionItemsExecutor };
+export { nftOnSaleTool, nftOnSaleExecutor };
 export { jettonSendTool, jettonSendExecutor };
 export { jettonBalancesTool, jettonBalancesExecutor };
 export { jettonInfoTool, jettonInfoExecutor };
@@ -40,6 +52,12 @@ export const tools: ToolEntry[] = [
   { tool: tonMyTransactionsTool, executor: tonMyTransactionsExecutor },
   { tool: tonChartTool, executor: tonChartExecutor },
   { tool: nftListTool, executor: nftListExecutor },
+  { tool: nftDetailTool, executor: nftDetailExecutor },
+  { tool: nftTransferTool, executor: nftTransferExecutor, scope: "dm-only" },
+  { tool: nftCollectionInfoTool, executor: nftCollectionInfoExecutor },
+  { tool: nftHistoryTool, executor: nftHistoryExecutor },
+  { tool: nftCollectionItemsTool, executor: nftCollectionItemsExecutor },
+  { tool: nftOnSaleTool, executor: nftOnSaleExecutor },
   { tool: jettonSendTool, executor: jettonSendExecutor, scope: "dm-only" },
   { tool: jettonBalancesTool, executor: jettonBalancesExecutor },
   { tool: jettonInfoTool, executor: jettonInfoExecutor },
